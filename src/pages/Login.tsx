@@ -1,0 +1,128 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Eye, EyeOff, LogIn } from "lucide-react";
+import heroImg from "@/assets/hero-wedding.jpg";
+
+const Login = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [role, setRole] = useState<"customer" | "admin">("customer");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Mock login - redirect based on role
+    if (role === "admin") {
+      window.location.href = "/admin";
+    } else {
+      window.location.href = "/dashboard";
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Left - Image */}
+      <div className="hidden lg:block lg:w-1/2 relative">
+        <img src={heroImg} alt="Eternal Events" className="w-full h-full object-cover" />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.6), hsl(var(--on-surface) / 0.4))" }} />
+        <div className="absolute inset-0 flex items-center justify-center p-12">
+          <div className="text-center">
+            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="font-serif text-display-md text-primary-foreground mb-4">
+              Eternal Events
+            </motion.h1>
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="font-body text-primary-foreground/80 text-lg max-w-md">
+              Biến mọi khoảnh khắc thành kỷ niệm vĩnh cửu
+            </motion.p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right - Form */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-background">
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-md">
+          <Link to="/" className="font-serif text-headline-lg text-primary font-bold mb-2 block lg:hidden">
+            Eternal Events
+          </Link>
+          <h2 className="font-serif text-display-sm text-foreground mb-2">Đăng nhập</h2>
+          <p className="font-body text-muted-foreground mb-8">Chào mừng bạn trở lại!</p>
+
+          {/* Role toggle */}
+          <div className="flex gap-2 mb-8 p-1 rounded-xl bg-surface-low">
+            <button
+              onClick={() => setRole("customer")}
+              className={`flex-1 py-2.5 rounded-lg font-body text-sm transition-all ${role === "customer" ? "bg-background shadow-ambient text-foreground font-semibold" : "text-muted-foreground"}`}
+            >
+              Khách hàng
+            </button>
+            <button
+              onClick={() => setRole("admin")}
+              className={`flex-1 py-2.5 rounded-lg font-body text-sm transition-all ${role === "admin" ? "bg-background shadow-ambient text-foreground font-semibold" : "text-muted-foreground"}`}
+            >
+              Ban tổ chức
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="font-body text-sm text-foreground mb-2 block">Email</label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@example.com"
+                className="py-5 rounded-xl bg-surface-lowest font-body border-none"
+                required
+              />
+            </div>
+            <div>
+              <label className="font-body text-sm text-foreground mb-2 block">Mật khẩu</label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="py-5 rounded-xl bg-surface-lowest font-body border-none pr-12"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 font-body text-sm text-muted-foreground">
+                <input type="checkbox" className="rounded" />
+                Ghi nhớ đăng nhập
+              </label>
+              <Link to="/quen-mat-khau" className="font-body text-sm text-primary hover:underline">
+                Quên mật khẩu?
+              </Link>
+            </div>
+
+            <Button type="submit" variant="hero" className="w-full py-6 text-base">
+              Đăng nhập <LogIn size={18} />
+            </Button>
+          </form>
+
+          <p className="font-body text-sm text-muted-foreground text-center mt-8">
+            Chưa có tài khoản?{" "}
+            <Link to="/dang-ky" className="text-primary font-semibold hover:underline">
+              Đăng ký ngay
+            </Link>
+          </p>
+        </motion.div>
+      </div>
+    </div>
+  );
+};
+
+export default Login;
