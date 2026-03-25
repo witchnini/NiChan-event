@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Calendar, FileText, CreditCard, MessageSquare, Clock, CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
+import { Calendar, FileText, CreditCard, MessageSquare, Clock, CheckCircle, AlertCircle, ArrowRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
@@ -106,6 +106,11 @@ const CustomerDashboard = () => {
               <Link to="/dashboard/hop-dong">
                 <Button variant="outline" className="w-full">
                   Xem hợp đồng
+                </Button>
+              </Link>
+              <Link to="/dashboard/danh-gia">
+                <Button variant="outline" className="w-full">
+                  <Star size={16} /> Đánh giá sự kiện
                 </Button>
               </Link>
             </div>
