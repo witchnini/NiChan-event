@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard, FileText, FolderKanban, Users, Building2, DollarSign,
-  FileSignature, BarChart3, Globe, Settings, LogOut, Menu, X, ChevronLeft, Bell, CheckCircle
+  LayoutDashboard, FileText, Users, DollarSign,
+  FileSignature, BarChart3, Globe, LogOut, Menu, X, ChevronLeft, Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";

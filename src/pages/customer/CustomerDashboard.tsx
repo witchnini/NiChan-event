@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Calendar, FileText, CreditCard, MessageSquare, Clock, CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
+import { Calendar, FileText, CreditCard, MessageSquare, Clock, CheckCircle, AlertCircle, ArrowRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
