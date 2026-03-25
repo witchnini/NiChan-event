@@ -10,13 +10,14 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<"customer" | "admin">("customer");
+  const [role, setRole] = useState<"customer" | "organizer" | "admin">("customer");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login - redirect based on role
     if (role === "admin") {
       window.location.href = "/admin";
+    } else if (role === "organizer") {
+      window.location.href = "/ban-to-chuc";
     } else {
       window.location.href = "/dashboard";
     }
