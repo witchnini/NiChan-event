@@ -108,6 +108,11 @@ const CustomerDashboard = () => {
                   Xem hợp đồng
                 </Button>
               </Link>
+              <Link to="/dashboard/danh-gia">
+                <Button variant="outline" className="w-full">
+                  <Star size={16} /> Đánh giá sự kiện
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
