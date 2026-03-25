@@ -11,14 +11,11 @@ import { toast } from "sonner";
 const sidebarItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
   { label: "Yêu cầu", icon: FileText, path: "/admin/yeu-cau" },
-  { label: "Dự án", icon: FolderKanban, path: "/admin/du-an" },
-  { label: "Nhân sự", icon: Users, path: "/admin/nhan-su" },
-  { label: "Nhà cung cấp", icon: Building2, path: "/admin/nha-cung-cap" },
-  { label: "Tài chính", icon: DollarSign, path: "/admin/tai-chinh" },
-  { label: "Hợp đồng", icon: FileSignature, path: "/admin/hop-dong" },
-  { label: "Báo cáo", icon: BarChart3, path: "/admin/bao-cao" },
+  { label: "Người dùng", icon: Users, path: "/admin/nguoi-dung" },
   { label: "Nội dung", icon: Globe, path: "/admin/noi-dung" },
-  { label: "Người dùng", icon: Settings, path: "/admin/nguoi-dung" },
+  { label: "Hợp đồng", icon: FileSignature, path: "/admin/hop-dong" },
+  { label: "Tài chính", icon: DollarSign, path: "/admin/tai-chinh" },
+  { label: "Thống kê", icon: BarChart3, path: "/admin/bao-cao" },
 ];
 
 type Notification = { id: number; text: string; time: string; read: boolean; };

@@ -51,19 +51,17 @@ const Login = () => {
           <p className="font-body text-muted-foreground mb-8">Chào mừng bạn trở lại!</p>
 
           {/* Role toggle */}
-          <div className="flex gap-2 mb-8 p-1 rounded-xl bg-surface-low">
-            <button
-              onClick={() => setRole("customer")}
-              className={`flex-1 py-2.5 rounded-lg font-body text-sm transition-all ${role === "customer" ? "bg-background shadow-ambient text-foreground font-semibold" : "text-muted-foreground"}`}
-            >
-              Khách hàng
-            </button>
-            <button
-              onClick={() => setRole("admin")}
-              className={`flex-1 py-2.5 rounded-lg font-body text-sm transition-all ${role === "admin" ? "bg-background shadow-ambient text-foreground font-semibold" : "text-muted-foreground"}`}
-            >
-              Ban tổ chức
-            </button>
+          <div className="flex gap-1 mb-8 p-1 rounded-xl bg-surface-low">
+            {([
+              { key: "customer" as const, label: "Khách hàng" },
+              { key: "organizer" as const, label: "Ban tổ chức" },
+              { key: "admin" as const, label: "Quản trị viên" },
+            ]).map(r => (
+              <button key={r.key} onClick={() => setRole(r.key)}
+                className={`flex-1 py-2.5 rounded-lg font-body text-sm transition-all ${role === r.key ? "bg-background shadow-ambient text-foreground font-semibold" : "text-muted-foreground"}`}>
+                {r.label}
+              </button>
+            ))}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

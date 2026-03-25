@@ -16,16 +16,24 @@ import About from "./pages/About.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
+// Customer
 import CustomerDashboard from "./pages/customer/CustomerDashboard.tsx";
 import MyEvents from "./pages/customer/MyEvents.tsx";
 import EventTracking from "./pages/customer/EventTracking.tsx";
 import MyContracts from "./pages/customer/MyContracts.tsx";
+import ReviewRating from "./pages/customer/ReviewRating.tsx";
+// Organizer
+import OrganizerLayout from "./pages/organizer/OrganizerLayout.tsx";
+import OrganizerDashboard from "./pages/organizer/OrganizerDashboard.tsx";
+import OrganizerProjects from "./pages/organizer/OrganizerProjects.tsx";
+import OrganizerStaff from "./pages/organizer/OrganizerStaff.tsx";
+import OrganizerVendors from "./pages/organizer/OrganizerVendors.tsx";
+import OrganizerBudget from "./pages/organizer/OrganizerBudget.tsx";
+import OrganizerReports from "./pages/organizer/OrganizerReports.tsx";
+// Admin
 import AdminLayout from "./pages/admin/AdminLayout.tsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AdminRequests from "./pages/admin/AdminRequests.tsx";
-import AdminProjects from "./pages/admin/AdminProjects.tsx";
-import AdminStaff from "./pages/admin/AdminStaff.tsx";
-import AdminVendors from "./pages/admin/AdminVendors.tsx";
 import AdminFinance from "./pages/admin/AdminFinance.tsx";
 import AdminContracts from "./pages/admin/AdminContracts.tsx";
 import AdminReports from "./pages/admin/AdminReports.tsx";
@@ -34,7 +42,6 @@ import AdminUsers from "./pages/admin/AdminUsers.tsx";
 
 const queryClient = new QueryClient();
 
-// Layout wrapper for public pages (with Navbar + Footer)
 const PublicLayout = ({ children }: { children: React.ReactNode }) => (
   <>
     <Navbar />
@@ -50,25 +57,32 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Auth pages - no navbar/footer */}
+          {/* Auth */}
           <Route path="/dang-nhap" element={<Login />} />
           <Route path="/dang-ky" element={<Register />} />
 
-          {/* Admin panel - own layout */}
+          {/* Organizer Portal */}
+          <Route path="/ban-to-chuc" element={<OrganizerLayout />}>
+            <Route index element={<OrganizerDashboard />} />
+            <Route path="du-an" element={<OrganizerProjects />} />
+            <Route path="nhan-su" element={<OrganizerStaff />} />
+            <Route path="nha-cung-cap" element={<OrganizerVendors />} />
+            <Route path="ngan-sach" element={<OrganizerBudget />} />
+            <Route path="bao-cao" element={<OrganizerReports />} />
+          </Route>
+
+          {/* Admin Panel */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="yeu-cau" element={<AdminRequests />} />
-            <Route path="du-an" element={<AdminProjects />} />
-            <Route path="nhan-su" element={<AdminStaff />} />
-            <Route path="nha-cung-cap" element={<AdminVendors />} />
-            <Route path="tai-chinh" element={<AdminFinance />} />
-            <Route path="hop-dong" element={<AdminContracts />} />
-            <Route path="bao-cao" element={<AdminReports />} />
-            <Route path="noi-dung" element={<AdminContent />} />
             <Route path="nguoi-dung" element={<AdminUsers />} />
+            <Route path="noi-dung" element={<AdminContent />} />
+            <Route path="hop-dong" element={<AdminContracts />} />
+            <Route path="tai-chinh" element={<AdminFinance />} />
+            <Route path="bao-cao" element={<AdminReports />} />
           </Route>
 
-          {/* Public pages */}
+          {/* Public */}
           <Route path="/" element={<PublicLayout><Index /></PublicLayout>} />
           <Route path="/dich-vu" element={<PublicLayout><Services /></PublicLayout>} />
           <Route path="/dich-vu/:slug" element={<PublicLayout><ServiceDetail /></PublicLayout>} />
@@ -78,11 +92,12 @@ const App = () => (
           <Route path="/lien-he" element={<PublicLayout><Contact /></PublicLayout>} />
           <Route path="/gioi-thieu" element={<PublicLayout><About /></PublicLayout>} />
 
-          {/* Customer dashboard */}
+          {/* Customer */}
           <Route path="/dashboard" element={<PublicLayout><CustomerDashboard /></PublicLayout>} />
           <Route path="/dashboard/su-kien" element={<PublicLayout><MyEvents /></PublicLayout>} />
           <Route path="/dashboard/su-kien/:id" element={<PublicLayout><EventTracking /></PublicLayout>} />
           <Route path="/dashboard/hop-dong" element={<PublicLayout><MyContracts /></PublicLayout>} />
+          <Route path="/dashboard/danh-gia" element={<PublicLayout><ReviewRating /></PublicLayout>} />
 
           <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />
         </Routes>
