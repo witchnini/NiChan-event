@@ -93,6 +93,8 @@ const App = () => (
             <Route path="du-an" element={<AdminProjects />} />
             <Route path="nhan-su" element={<AdminStaff />} />
             <Route path="nha-cung-cap" element={<AdminVendors />} />
+            <Route path="thong-bao" element={<AdminNotifications />} />
+            <Route path="ho-so" element={<AdminProfile />} />
           </Route>
 
           {/* Public */}
