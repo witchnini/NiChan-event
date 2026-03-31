@@ -77,6 +77,8 @@ const App = () => (
             <Route path="nha-cung-cap" element={<OrganizerVendors />} />
             <Route path="ngan-sach" element={<OrganizerBudget />} />
             <Route path="bao-cao" element={<OrganizerReports />} />
+            <Route path="thong-bao" element={<OrganizerNotifications />} />
+            <Route path="ho-so" element={<OrganizerProfile />} />
           </Route>
 
           {/* Admin Panel */}
