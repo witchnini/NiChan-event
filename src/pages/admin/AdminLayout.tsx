@@ -20,6 +20,7 @@ const sidebarItems = [
   { label: "Hợp đồng", icon: FileSignature, path: "/admin/hop-dong" },
   { label: "Tài chính", icon: DollarSign, path: "/admin/tai-chinh" },
   { label: "Thống kê", icon: BarChart3, path: "/admin/bao-cao" },
+  { label: "Thông báo", icon: Bell, path: "/admin/thong-bao" },
 ];
 
 import { mockAdminNotifications, type Notification } from "@/services/mockData";
