@@ -12,7 +12,7 @@ const values = [
 ];
 
 const milestones = [
-  { year: "2014", event: "Thành lập Eternal Events tại TP.HCM" },
+  { year: "2014", event: "Thành lập NiChan Events tại TP.HCM" },
   { year: "2016", event: "Mở rộng ra Hà Nội, đạt 100 sự kiện" },
   { year: "2018", event: "Đối tác chiến lược với 20+ venue hàng đầu" },
   { year: "2020", event: "Tiên phong tổ chức sự kiện hybrid & online" },
@@ -41,14 +41,14 @@ const About = () => {
                 Kiến tạo kỷ niệm,<br /><span className="text-primary italic">viết nên câu chuyện</span>
               </h1>
               <p className="font-body text-muted-foreground text-lg leading-relaxed mb-6">
-                Eternal Events ra đời từ niềm đam mê mãnh liệt với nghệ thuật tổ chức sự kiện. Chúng tôi tin rằng mỗi sự kiện là một câu chuyện — và mỗi câu chuyện xứng đáng được kể một cách đẹp nhất.
+                NiChan Events ra đời từ niềm đam mê mãnh liệt với nghệ thuật tổ chức sự kiện. Chúng tôi tin rằng mỗi sự kiện là một câu chuyện — và mỗi câu chuyện xứng đáng được kể một cách đẹp nhất.
               </p>
               <p className="font-body text-muted-foreground leading-relaxed">
                 Với hơn 12 năm kinh nghiệm và đội ngũ sáng tạo tài năng, chúng tôi đã mang đến hơn 500 sự kiện thành công cho hàng nghìn khách hàng trên khắp Việt Nam.
               </p>
             </motion.div>
             <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="relative">
-              <img src={aboutTeam} alt="Đội ngũ Eternal Events" className="rounded-xl shadow-ambient-lg w-full" loading="lazy" width={1200} height={800} />
+              <img src={aboutTeam} alt="Đội ngũ NiChan Events" className="rounded-xl shadow-ambient-lg w-full" loading="lazy" width={1200} height={800} />
               <div className="absolute -bottom-6 -left-6 bg-surface-lowest rounded-xl p-6 shadow-ambient-lg hidden md:block">
                 <div className="flex items-center gap-3">
                   <Award size={32} className="text-primary" />

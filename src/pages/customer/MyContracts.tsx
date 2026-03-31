@@ -8,9 +8,9 @@ import { toast } from "sonner";
 
 const contracts = [
   { id: 1, event: "Tiệc cưới Minh & Hà", number: "HD-2026-001", date: "19/03/2026", value: "250,000,000đ", status: "Hiệu lực", version: "1.0",
-    details: { parties: "Eternal Events & Nguyễn Thanh Hà", scope: "Tổ chức trọn gói tiệc cưới 300 khách tại GEM Center", payment: "Đặt cọc 30% → 40% trước 14 ngày → 30% sau sự kiện", terms: "Hủy trước 30 ngày: hoàn 50% cọc. Hủy trong 30 ngày: không hoàn." } },
+    details: { parties: "NiChan Events & Nguyễn Thanh Hà", scope: "Tổ chức trọn gói tiệc cưới 300 khách tại GEM Center", payment: "Đặt cọc 30% → 40% trước 14 ngày → 30% sau sự kiện", terms: "Hủy trước 30 ngày: hoàn 50% cọc. Hủy trong 30 ngày: không hoàn." } },
   { id: 2, event: "Gala cuối năm 2025", number: "HD-2025-012", date: "15/11/2025", value: "450,000,000đ", status: "Thanh lý", version: "1.2",
-    details: { parties: "Eternal Events & Lê Thị Hương", scope: "Tổ chức Gala Dinner 500 khách tại Sheraton Saigon", payment: "Đã thanh toán 100%", terms: "Hợp đồng đã thanh lý." } },
+    details: { parties: "NiChan Events & Lê Thị Hương", scope: "Tổ chức Gala Dinner 500 khách tại Sheraton Saigon", payment: "Đã thanh toán 100%", terms: "Hợp đồng đã thanh lý." } },
 ];
 
 const MyContracts = () => {

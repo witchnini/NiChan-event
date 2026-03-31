@@ -6,6 +6,7 @@ import {
   Globe, LogOut, Menu, X, ChevronLeft, Bell
 } from "lucide-react";
 import { toast } from "sonner";
+import { mockOrganizerAccounts } from "@/services/mockData";
 
 const sidebarItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/ban-to-chuc" },
@@ -16,14 +17,9 @@ const sidebarItems = [
   { label: "Báo cáo & Tổng kết", icon: FileBarChart, path: "/ban-to-chuc/bao-cao" },
 ];
 
-type Notification = { id: number; text: string; time: string; read: boolean };
+import { mockOrganizerNotifications, type Notification } from "@/services/mockData";
 
-const initialNotifications: Notification[] = [
-  { id: 1, text: "Task 'Đặt venue GEM Center' đã hoàn thành", time: "10 phút trước", read: false },
-  { id: 2, text: "Nhà cung cấp ABC Catering xác nhận đơn hàng", time: "1 giờ trước", read: false },
-  { id: 3, text: "Chi phí dự án 'Tiệc cưới Minh & Hà' vượt 5% dự toán", time: "2 giờ trước", read: false },
-  { id: 4, text: "Nhân viên Trần Văn Đức đã được phân công ca mới", time: "3 giờ trước", read: true },
-];
+const initialNotifications = mockOrganizerNotifications;
 
 const OrganizerLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -31,6 +27,11 @@ const OrganizerLayout = () => {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const organizerParam = searchParams.get("organizer");
+  const currentOrganizer = organizerParam
+    ? mockOrganizerAccounts.find(o => o.id === organizerParam) ?? null
+    : null;
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -42,7 +43,7 @@ const OrganizerLayout = () => {
     <div className="flex flex-col h-full">
       <div className="p-4 flex items-center gap-2">
         <Link to="/ban-to-chuc" className="flex items-center gap-2">
-          <span className="font-serif text-headline-md text-secondary font-bold">E</span>
+          <span className="font-serif text-headline-md text-secondary font-bold">N</span>
           {!collapsed && <span className="font-serif text-headline-md text-foreground font-light">Organizer</span>}
         </Link>
         <button onClick={() => setCollapsed(!collapsed)} className="ml-auto hidden lg:block text-muted-foreground hover:text-foreground">
@@ -63,7 +64,19 @@ const OrganizerLayout = () => {
         })}
       </nav>
       <div className="p-3 space-y-1">
-        <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-muted-foreground hover:text-foreground hover:bg-surface-low transition-all">
+        {/* Organizer info */}
+        {currentOrganizer && !collapsed && (
+          <div className="px-3 py-2.5 mb-1 rounded-xl bg-surface-low">
+            <p className="font-body text-xs font-semibold text-foreground truncate">{currentOrganizer.name}</p>
+            <p className="font-body text-xs text-muted-foreground truncate">{currentOrganizer.role}</p>
+            <p className="font-body text-xs text-muted-foreground truncate">{currentOrganizer.email}</p>
+          </div>
+        )}
+        <Link
+          to={`/?role=organizer${organizerParam ? `&organizer=${organizerParam}` : ""}`}
+          onClick={() => setMobileOpen(false)}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-muted-foreground hover:text-foreground hover:bg-surface-low transition-all"
+        >
           <Globe size={18} />{!collapsed && <span>Xem website</span>}
         </Link>
         <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-destructive hover:bg-destructive/10 transition-all">
@@ -132,7 +145,17 @@ const OrganizerLayout = () => {
                 )}
               </AnimatePresence>
             </div>
-            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-body font-bold text-sm">O</div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-body font-bold text-sm">
+                {currentOrganizer ? currentOrganizer.avatar : "O"}
+              </div>
+              {currentOrganizer && (
+                <div className="hidden md:block text-right">
+                  <p className="font-body text-xs font-semibold text-foreground leading-tight">{currentOrganizer.name}</p>
+                  <p className="font-body text-xs text-muted-foreground leading-tight">{currentOrganizer.role}</p>
+                </div>
+              )}
+            </div>
           </div>
         </header>
         <main className="flex-1 p-6"><Outlet /></main>

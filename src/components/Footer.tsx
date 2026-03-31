@@ -9,7 +9,7 @@ const Footer = () => {
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link to="/" className="inline-block mb-6">
-              <span className="font-serif text-headline-md text-primary font-bold">Eternal</span>
+              <span className="font-serif text-headline-md text-primary font-bold">NiChan</span>
               <span className="font-serif text-headline-md text-foreground font-light"> Events</span>
             </Link>
             <p className="text-muted-foreground font-body leading-relaxed">
@@ -54,15 +54,15 @@ const Footer = () => {
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
                 <MapPin size={18} className="text-primary mt-0.5 shrink-0" />
-                <span className="text-muted-foreground font-body text-sm">123 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh</span>
+                <span className="text-muted-foreground font-body text-sm">Đông Phương- Đông Hưng- Thái Bình</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone size={18} className="text-primary shrink-0" />
-                <span className="text-muted-foreground font-body text-sm">0901 234 567</span>
+                <span className="text-muted-foreground font-body text-sm">0123 456 789</span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail size={18} className="text-primary shrink-0" />
-                <span className="text-muted-foreground font-body text-sm">hello@eternalevents.vn</span>
+                <span className="text-muted-foreground font-body text-sm">hello@nichanevents.vn</span>
               </li>
             </ul>
           </div>
@@ -70,7 +70,7 @@ const Footer = () => {
 
         <div className="mt-16 pt-8 text-center" style={{ borderTop: '1px solid hsl(var(--outline-variant) / 0.2)' }}>
           <p className="text-muted-foreground font-body text-sm flex items-center justify-center gap-1">
-            Made with <Heart size={14} className="text-primary fill-primary" /> by Eternal Events © 2026
+            Made with <Heart size={14} className="text-primary fill-primary" /> by NiChan Events © 2026
           </p>
         </div>
       </div>

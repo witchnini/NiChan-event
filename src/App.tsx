@@ -39,6 +39,9 @@ import AdminContracts from "./pages/admin/AdminContracts.tsx";
 import AdminReports from "./pages/admin/AdminReports.tsx";
 import AdminContent from "./pages/admin/AdminContent.tsx";
 import AdminUsers from "./pages/admin/AdminUsers.tsx";
+import AdminProjects from "./pages/admin/AdminProjects.tsx";
+import AdminStaff from "./pages/admin/AdminStaff.tsx";
+import AdminVendors from "./pages/admin/AdminVendors.tsx";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +83,9 @@ const App = () => (
             <Route path="hop-dong" element={<AdminContracts />} />
             <Route path="tai-chinh" element={<AdminFinance />} />
             <Route path="bao-cao" element={<AdminReports />} />
+            <Route path="du-an" element={<AdminProjects />} />
+            <Route path="nhan-su" element={<AdminStaff />} />
+            <Route path="nha-cung-cap" element={<AdminVendors />} />
           </Route>
 
           {/* Public */}

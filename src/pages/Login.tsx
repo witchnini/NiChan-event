@@ -10,13 +10,11 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<"customer" | "organizer" | "admin">("customer");
+  const [role, setRole] = useState<"customer" | "organizer">("customer");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (role === "admin") {
-      window.location.href = "/admin";
-    } else if (role === "organizer") {
+    if (role === "organizer") {
       window.location.href = "/ban-to-chuc";
     } else {
       window.location.href = "/dashboard";
@@ -27,13 +25,15 @@ const Login = () => {
     <div className="min-h-screen flex">
       {/* Left - Image */}
       <div className="hidden lg:block lg:w-1/2 relative">
-        <img src={heroImg} alt="Eternal Events" className="w-full h-full object-cover" />
+        <img src={heroImg} alt="NiChan Events" className="w-full h-full object-cover" />
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.6), hsl(var(--on-surface) / 0.4))" }} />
         <div className="absolute inset-0 flex items-center justify-center p-12">
           <div className="text-center">
-            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="font-serif text-display-md text-primary-foreground mb-4">
-              Eternal Events
-            </motion.h1>
+            <Link to="/">
+              <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="font-serif text-display-md text-primary-foreground mb-4 cursor-pointer hover:opacity-80 transition-opacity">
+                NiChan Events
+              </motion.h1>
+            </Link>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="font-body text-primary-foreground/80 text-lg max-w-md">
               Biến mọi khoảnh khắc thành kỷ niệm vĩnh cửu
             </motion.p>
@@ -45,7 +45,7 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-md">
           <Link to="/" className="font-serif text-headline-lg text-primary font-bold mb-2 block lg:hidden">
-            Eternal Events
+            NiChan Events
           </Link>
           <h2 className="font-serif text-display-sm text-foreground mb-2">Đăng nhập</h2>
           <p className="font-body text-muted-foreground mb-8">Chào mừng bạn trở lại!</p>
@@ -55,7 +55,6 @@ const Login = () => {
             {([
               { key: "customer" as const, label: "Khách hàng" },
               { key: "organizer" as const, label: "Ban tổ chức" },
-              { key: "admin" as const, label: "Quản trị viên" },
             ]).map(r => (
               <button key={r.key} onClick={() => setRole(r.key)}
                 className={`flex-1 py-2.5 rounded-lg font-body text-sm transition-all ${role === r.key ? "bg-background shadow-ambient text-foreground font-semibold" : "text-muted-foreground"}`}>

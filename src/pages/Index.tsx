@@ -26,7 +26,7 @@ const stats = [
 ];
 
 const testimonials = [
-  { name: "Nguyễn Thanh Hà", role: "CEO, Công ty ABC", text: "Eternal Events đã biến đám cưới của tôi thành một giấc mơ cổ tích. Mọi chi tiết đều hoàn hảo!", rating: 5 },
+  { name: "Nguyễn Thanh Hà", role: "CEO, Công ty ABC", text: "NiChan Events đã biến đám cưới của tôi thành một giấc mơ cổ tích. Mọi chi tiết đều hoàn hảo!", rating: 5 },
   { name: "Trần Minh Đức", role: "Giám đốc Marketing, XYZ Corp", text: "Sự kiện khai trương được tổ chức chuyên nghiệp, vượt ngoài mong đợi. Chắc chắn sẽ hợp tác lâu dài!", rating: 5 },
   { name: "Lê Thị Hương", role: "Phó TGĐ, Tập đoàn DEF", text: "Gala dinner cuối năm quá ấn tượng! Đội ngũ sáng tạo, tận tâm và luôn lắng nghe khách hàng.", rating: 5 },
 ];
@@ -43,10 +43,10 @@ const Index = () => {
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center overflow-hidden">
         <div className="absolute inset-0">
-          <img src={heroImg} alt="Eternal Events" className="w-full h-full object-cover" width={1920} height={1080} />
+          <img src={heroImg} alt="NiChan Events" className="w-full h-full object-cover" width={1920} height={1080} />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, hsl(var(--surface) / 0.85), hsl(var(--surface) / 0.4))' }} />
         </div>
-        
+
         <div className="container mx-auto px-6 relative z-10 pt-24">
           <div className="max-w-3xl">
             <motion.span
@@ -55,9 +55,9 @@ const Index = () => {
               transition={{ delay: 0.2 }}
               className="tracking-editorial text-label-md text-primary font-body font-semibold mb-6 block"
             >
-              ✿ Eternal Events
+              ✿ NiChan Events
             </motion.span>
-            
+
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -67,7 +67,7 @@ const Index = () => {
               Biến mọi khoảnh khắc thành{" "}
               <span className="text-primary italic">kỷ niệm vĩnh cửu</span>
             </motion.h1>
-            
+
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -76,7 +76,7 @@ const Index = () => {
             >
               Chúng tôi tạo nên những sự kiện đẹp như tranh vẽ — từ tiệc cưới lãng mạn đến gala dinner sang trọng, mỗi sự kiện là một câu chuyện riêng.
             </motion.p>
-            
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -98,7 +98,7 @@ const Index = () => {
         </div>
 
         {/* Floating floral element */}
-        <motion.div 
+        <motion.div
           animate={{ y: [-10, 10, -10] }}
           transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
           className="absolute bottom-20 right-20 text-6xl opacity-20 hidden lg:block"
@@ -136,7 +136,7 @@ const Index = () => {
             title="Mỗi sự kiện, một tuyệt tác"
             subtitle="Từ lễ cưới thơ mộng đến hội nghị đẳng cấp, chúng tôi mang đến trải nghiệm không thể quên."
           />
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {services.map((service, i) => (
               <motion.div
@@ -179,7 +179,7 @@ const Index = () => {
             title="Câu chuyện qua từng sự kiện"
             subtitle="Những khoảnh khắc đẹp nhất mà chúng tôi đã tạo nên cùng khách hàng."
           />
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {portfolioItems.map((item, i) => (
               <motion.div
@@ -210,7 +210,7 @@ const Index = () => {
               </motion.div>
             ))}
           </div>
-          
+
           <div className="text-center mt-12">
             <Link to="/portfolio">
               <Button variant="tertiary" size="lg">
@@ -228,7 +228,7 @@ const Index = () => {
             label="Khách hàng nói gì"
             title="Lời tri ân từ trái tim"
           />
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((t, i) => (
               <motion.div

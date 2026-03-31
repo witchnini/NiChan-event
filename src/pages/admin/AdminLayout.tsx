@@ -3,7 +3,8 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FileText, Users, DollarSign,
-  FileSignature, BarChart3, Globe, LogOut, Menu, X, ChevronLeft, Bell
+  FileSignature, BarChart3, Globe, LogOut, Menu, X, ChevronLeft, Bell,
+  FolderKanban, UserCog, Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -11,22 +12,19 @@ import { toast } from "sonner";
 const sidebarItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
   { label: "Yêu cầu", icon: FileText, path: "/admin/yeu-cau" },
+  { label: "Dự án", icon: FolderKanban, path: "/admin/du-an" },
   { label: "Người dùng", icon: Users, path: "/admin/nguoi-dung" },
+  { label: "Nhân sự", icon: UserCog, path: "/admin/nhan-su" },
+  { label: "Nhà cung cấp", icon: Building2, path: "/admin/nha-cung-cap" },
   { label: "Nội dung", icon: Globe, path: "/admin/noi-dung" },
   { label: "Hợp đồng", icon: FileSignature, path: "/admin/hop-dong" },
   { label: "Tài chính", icon: DollarSign, path: "/admin/tai-chinh" },
   { label: "Thống kê", icon: BarChart3, path: "/admin/bao-cao" },
 ];
 
-type Notification = { id: number; text: string; time: string; read: boolean; };
+import { mockAdminNotifications, type Notification } from "@/services/mockData";
 
-const initialNotifications: Notification[] = [
-  { id: 1, text: "Yêu cầu mới từ Nguyễn Thị Mai - Tiệc cưới", time: "5 phút trước", read: false },
-  { id: 2, text: "Thanh toán đặt cọc 75tr đã xác nhận", time: "30 phút trước", read: false },
-  { id: 3, text: "Task 'Xác nhận venue' sắp hết hạn", time: "1 giờ trước", read: false },
-  { id: 4, text: "Đánh giá mới từ khách hàng Trần Minh Đức", time: "2 giờ trước", read: true },
-  { id: 5, text: "Hợp đồng HD-2026-002 đã được gửi", time: "3 giờ trước", read: true },
-];
+const initialNotifications = mockAdminNotifications;
 
 const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -55,7 +53,7 @@ const AdminLayout = () => {
     <div className="flex flex-col h-full">
       <div className="p-4 flex items-center gap-2">
         <Link to="/admin" className="flex items-center gap-2">
-          <span className="font-serif text-headline-md text-primary font-bold">E</span>
+          <span className="font-serif text-headline-md text-primary font-bold">N</span>
           {!collapsed && <span className="font-serif text-headline-md text-foreground font-light">Admin</span>}
         </Link>
         <button onClick={() => setCollapsed(!collapsed)} className="ml-auto hidden lg:block text-muted-foreground hover:text-foreground">
@@ -76,7 +74,7 @@ const AdminLayout = () => {
         })}
       </nav>
       <div className="p-3 space-y-1">
-        <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-muted-foreground hover:text-foreground hover:bg-surface-low transition-all">
+        <Link to="/?role=admin" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-muted-foreground hover:text-foreground hover:bg-surface-low transition-all">
           <Globe size={18} />{!collapsed && <span>Xem website</span>}
         </Link>
         <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-destructive hover:bg-destructive/10 transition-all">

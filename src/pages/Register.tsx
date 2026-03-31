@@ -24,7 +24,7 @@ const Register = () => {
   return (
     <div className="min-h-screen flex">
       <div className="hidden lg:block lg:w-1/2 relative">
-        <img src={heroImg} alt="Eternal Events" className="w-full h-full object-cover" />
+        <img src={heroImg} alt="NiChan Events" className="w-full h-full object-cover" />
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, hsl(var(--secondary) / 0.6), hsl(var(--on-surface) / 0.4))" }} />
         <div className="absolute inset-0 flex items-center justify-center p-12">
           <div className="text-center">
@@ -41,7 +41,7 @@ const Register = () => {
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-md">
           <Link to="/" className="font-serif text-headline-lg text-primary font-bold mb-2 block lg:hidden">
-            Eternal Events
+            NiChan Events
           </Link>
           <h2 className="font-serif text-display-sm text-foreground mb-2">Đăng ký</h2>
           <p className="font-body text-muted-foreground mb-8">Tạo tài khoản miễn phí</p>
