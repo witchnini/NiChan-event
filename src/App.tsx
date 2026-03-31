@@ -42,6 +42,11 @@ import AdminUsers from "./pages/admin/AdminUsers.tsx";
 import AdminProjects from "./pages/admin/AdminProjects.tsx";
 import AdminStaff from "./pages/admin/AdminStaff.tsx";
 import AdminVendors from "./pages/admin/AdminVendors.tsx";
+import AdminNotifications from "./pages/admin/AdminNotifications.tsx";
+import AdminProfile from "./pages/admin/AdminProfile.tsx";
+import OrganizerNotifications from "./pages/organizer/OrganizerNotifications.tsx";
+import OrganizerProfile from "./pages/organizer/OrganizerProfile.tsx";
+import CustomerProfile from "./pages/customer/CustomerProfile.tsx";
 
 const queryClient = new QueryClient();
 
