@@ -157,7 +157,7 @@ const AdminLayout = () => {
               </AnimatePresence>
             </div>
 
-            <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-body font-bold text-sm">A</div>
+            <Link to="/admin/ho-so" className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-body font-bold text-sm hover:opacity-80 transition-opacity">A</Link>
           </div>
         </header>
 
