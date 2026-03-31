@@ -113,6 +113,11 @@ const CustomerDashboard = () => {
                   <Star size={16} /> Đánh giá sự kiện
                 </Button>
               </Link>
+              <Link to="/dashboard/ho-so">
+                <Button variant="outline" className="w-full">
+                  <User size={16} /> Hồ sơ cá nhân
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
