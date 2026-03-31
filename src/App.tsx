@@ -113,6 +113,7 @@ const App = () => (
           <Route path="/dashboard/su-kien/:id" element={<PublicLayout><EventTracking /></PublicLayout>} />
           <Route path="/dashboard/hop-dong" element={<PublicLayout><MyContracts /></PublicLayout>} />
           <Route path="/dashboard/danh-gia" element={<PublicLayout><ReviewRating /></PublicLayout>} />
+          <Route path="/dashboard/ho-so" element={<PublicLayout><CustomerProfile /></PublicLayout>} />
 
           <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />
         </Routes>
