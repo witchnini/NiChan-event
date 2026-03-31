@@ -42,6 +42,11 @@ import AdminUsers from "./pages/admin/AdminUsers.tsx";
 import AdminProjects from "./pages/admin/AdminProjects.tsx";
 import AdminStaff from "./pages/admin/AdminStaff.tsx";
 import AdminVendors from "./pages/admin/AdminVendors.tsx";
+import AdminNotifications from "./pages/admin/AdminNotifications.tsx";
+import AdminProfile from "./pages/admin/AdminProfile.tsx";
+import OrganizerNotifications from "./pages/organizer/OrganizerNotifications.tsx";
+import OrganizerProfile from "./pages/organizer/OrganizerProfile.tsx";
+import CustomerProfile from "./pages/customer/CustomerProfile.tsx";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +77,8 @@ const App = () => (
             <Route path="nha-cung-cap" element={<OrganizerVendors />} />
             <Route path="ngan-sach" element={<OrganizerBudget />} />
             <Route path="bao-cao" element={<OrganizerReports />} />
+            <Route path="thong-bao" element={<OrganizerNotifications />} />
+            <Route path="ho-so" element={<OrganizerProfile />} />
           </Route>
 
           {/* Admin Panel */}
@@ -86,6 +93,8 @@ const App = () => (
             <Route path="du-an" element={<AdminProjects />} />
             <Route path="nhan-su" element={<AdminStaff />} />
             <Route path="nha-cung-cap" element={<AdminVendors />} />
+            <Route path="thong-bao" element={<AdminNotifications />} />
+            <Route path="ho-so" element={<AdminProfile />} />
           </Route>
 
           {/* Public */}
@@ -104,6 +113,7 @@ const App = () => (
           <Route path="/dashboard/su-kien/:id" element={<PublicLayout><EventTracking /></PublicLayout>} />
           <Route path="/dashboard/hop-dong" element={<PublicLayout><MyContracts /></PublicLayout>} />
           <Route path="/dashboard/danh-gia" element={<PublicLayout><ReviewRating /></PublicLayout>} />
+          <Route path="/dashboard/ho-so" element={<PublicLayout><CustomerProfile /></PublicLayout>} />
 
           <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />
         </Routes>

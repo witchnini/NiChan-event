@@ -20,6 +20,7 @@ const sidebarItems = [
   { label: "Hợp đồng", icon: FileSignature, path: "/admin/hop-dong" },
   { label: "Tài chính", icon: DollarSign, path: "/admin/tai-chinh" },
   { label: "Thống kê", icon: BarChart3, path: "/admin/bao-cao" },
+  { label: "Thông báo", icon: Bell, path: "/admin/thong-bao" },
 ];
 
 import { mockAdminNotifications, type Notification } from "@/services/mockData";
@@ -156,7 +157,7 @@ const AdminLayout = () => {
               </AnimatePresence>
             </div>
 
-            <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-body font-bold text-sm">A</div>
+            <Link to="/admin/ho-so" className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-body font-bold text-sm hover:opacity-80 transition-opacity">A</Link>
           </div>
         </header>
 
