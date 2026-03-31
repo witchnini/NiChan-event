@@ -15,6 +15,7 @@ const sidebarItems = [
   { label: "Nhà cung cấp", icon: Building2, path: "/ban-to-chuc/nha-cung-cap" },
   { label: "Ngân sách", icon: Wallet, path: "/ban-to-chuc/ngan-sach" },
   { label: "Báo cáo & Tổng kết", icon: FileBarChart, path: "/ban-to-chuc/bao-cao" },
+  { label: "Thông báo", icon: Bell, path: "/ban-to-chuc/thong-bao" },
 ];
 
 import { mockOrganizerNotifications, type Notification } from "@/services/mockData";
