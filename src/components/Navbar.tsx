@@ -78,7 +78,7 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass">
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-        <Link to={isLoggedIn ? `/?role=${isCustomer ? "customer" : roleParam}` : "/"} className="flex items-center gap-2">
+        <Link to={appendRole("/")} className="flex items-center gap-2">
           <span className="font-serif text-headline-md text-primary font-bold">NiChan</span>
           <span className="font-serif text-headline-md text-foreground font-light">Events</span>
         </Link>
@@ -87,7 +87,7 @@ const Navbar = () => {
           {links.map((link) => (
             <Link
               key={link.path}
-              to={link.path}
+              to={appendRole(link.path)}
               className={`font-body text-sm tracking-wide transition-colors duration-300 hover:text-primary ${location.pathname === link.path
                 ? "text-primary font-semibold"
                 : "text-muted-foreground"
