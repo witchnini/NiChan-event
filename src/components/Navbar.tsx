@@ -180,10 +180,16 @@ const Navbar = () => {
                         </Link>
                       )}
                       {isCustomer && (
-                        <Link to="/dashboard" onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
-                          <User size={14} /> Dashboard
-                        </Link>
+                        <>
+                          <Link to="/dashboard/ho-so" onClick={() => setProfileOpen(false)}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
+                            <User size={14} /> Hồ sơ cá nhân
+                          </Link>
+                          <Link to="/dashboard" onClick={() => setProfileOpen(false)}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
+                            <Settings size={14} /> Dashboard
+                          </Link>
+                        </>
                       )}
                       <button onClick={() => { setProfileOpen(false); handleLogout(); }}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-destructive hover:bg-destructive/10 transition-all w-full">
