@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, User, ChevronDown, Mail, Phone, Calendar, Settings } from "lucide-react";
+import { Menu, X, LogOut, User, ChevronDown, Mail, Phone, Calendar, Settings, Shield, LayoutDashboard } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { mockOrganizerAccounts } from "@/services/mockData";
@@ -28,6 +28,14 @@ const customerProfile = {
   phone: "0934 567 890",
   memberSince: "01/2025",
   events: 2,
+};
+
+const adminProfile = {
+  name: "Admin NiChan",
+  email: "admin@nichan.vn",
+  phone: "0900 000 001",
+  role: "Quản trị viên",
+  projects: 12,
 };
 
 const Navbar = () => {
@@ -150,46 +158,75 @@ const Navbar = () => {
                       </div>
                     </div>
 
-                    {isCustomerRole && (
-                      <div className="p-4 space-y-3 border-b border-border">
-                        <div className="flex items-center gap-3 text-sm font-body">
-                          <Mail size={14} className="text-muted-foreground shrink-0" />
-                          <span className="text-foreground">{customerProfile.email}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm font-body">
-                          <Phone size={14} className="text-muted-foreground shrink-0" />
-                          <span className="text-foreground">{customerProfile.phone}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm font-body">
-                          <Calendar size={14} className="text-muted-foreground shrink-0" />
-                          <span className="text-muted-foreground">Thành viên từ {customerProfile.memberSince}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm font-body">
-                          <Settings size={14} className="text-muted-foreground shrink-0" />
-                          <span className="text-muted-foreground">{customerProfile.events} sự kiện</span>
-                        </div>
+                    {/* Contact info section */}
+                    <div className="p-4 space-y-3 border-b border-border">
+                      <div className="flex items-center gap-3 text-sm font-body">
+                        <Mail size={14} className="text-muted-foreground shrink-0" />
+                        <span className="text-foreground">
+                          {isCustomerRole ? customerProfile.email : (isOrganizerRole && currentOrganizer) ? currentOrganizer.email : adminProfile.email}
+                        </span>
                       </div>
-                    )}
-
-                    <div className="p-2">
-                      {panelPath && !isCustomerRole && (
-                        <Link to={panelPath} onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
-                          <Settings size={14} /> Quay lại Panel
-                        </Link>
-                      )}
+                      <div className="flex items-center gap-3 text-sm font-body">
+                        <Phone size={14} className="text-muted-foreground shrink-0" />
+                        <span className="text-foreground">
+                          {isCustomerRole ? customerProfile.phone : (isOrganizerRole && currentOrganizer) ? currentOrganizer.phone : adminProfile.phone}
+                        </span>
+                      </div>
                       {isCustomerRole && (
                         <>
-                          <Link to="/dashboard/ho-so" onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
-                            <User size={14} /> Hồ sơ cá nhân
-                          </Link>
-                          <Link to="/dashboard" onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
-                            <Settings size={14} /> Dashboard
-                          </Link>
+                          <div className="flex items-center gap-3 text-sm font-body">
+                            <Calendar size={14} className="text-muted-foreground shrink-0" />
+                            <span className="text-muted-foreground">Thành viên từ {customerProfile.memberSince}</span>
+                          </div>
+                          <div className="flex items-center gap-3 text-sm font-body">
+                            <Settings size={14} className="text-muted-foreground shrink-0" />
+                            <span className="text-muted-foreground">{customerProfile.events} sự kiện</span>
+                          </div>
                         </>
                       )}
+                      {isOrganizerRole && currentOrganizer && (
+                        <div className="flex items-center gap-3 text-sm font-body">
+                          <Shield size={14} className="text-muted-foreground shrink-0" />
+                          <span className="text-muted-foreground">{currentOrganizer.role}</span>
+                        </div>
+                      )}
+                      {roleParam === "admin" && (
+                        <div className="flex items-center gap-3 text-sm font-body">
+                          <Shield size={14} className="text-muted-foreground shrink-0" />
+                          <span className="text-muted-foreground">{adminProfile.projects} dự án đang quản lý</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-2">
+                      {/* Profile link */}
+                      {isCustomerRole && (
+                        <Link to="/dashboard/ho-so" onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
+                          <User size={14} /> Hồ sơ cá nhân
+                        </Link>
+                      )}
+                      {roleParam === "admin" && (
+                        <Link to="/admin/ho-so" onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
+                          <User size={14} /> Hồ sơ cá nhân
+                        </Link>
+                      )}
+                      {isOrganizerRole && (
+                        <Link to={`/ban-to-chuc/ho-so${organizerParam ? `?organizer=${organizerParam}` : ""}`} onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
+                          <User size={14} /> Hồ sơ cá nhân
+                        </Link>
+                      )}
+                      {/* Panel link */}
+                      {panelPath && (
+                        <Link to={panelPath} onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
+                          <LayoutDashboard size={14} /> {isCustomerRole ? "Dashboard" : "Quay lại Panel"}
+                        </Link>
+                      )}
+                      {/* Divider */}
+                      <div className="my-1 border-t border-border" />
                       <button onClick={() => { setProfileOpen(false); handleLogout(); }}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-destructive hover:bg-destructive/10 transition-all w-full">
                         <LogOut size={14} /> Đăng xuất
