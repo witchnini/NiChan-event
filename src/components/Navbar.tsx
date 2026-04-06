@@ -48,6 +48,8 @@ const Navbar = () => {
   const panelPath = isCustomer ? "/dashboard" : roleParam === "customer" ? "/dashboard" : roleParam === "admin" ? "/admin" : roleParam === "organizer" ? `/ban-to-chuc${organizerParam ? `?organizer=${organizerParam}` : ""}` : "";
   const isCustomerRole = isCustomer || roleParam === "customer";
   const isOrganizerRole = roleParam === "organizer";
+  const currentRole = isCustomer ? "customer" : roleParam;
+  const roleQuery = isLoggedIn && currentRole ? `?role=${currentRole}${organizerParam ? `&organizer=${organizerParam}` : ""}` : "";
 
   const handleLogout = () => {
     toast.success("Đã đăng xuất");
@@ -55,6 +57,13 @@ const Navbar = () => {
   };
 
   const links = isCustomer ? customerLinks : navLinks;
+
+  const appendRole = (path: string) => {
+    if (!isLoggedIn || !currentRole) return path;
+    if (path.startsWith("/dashboard") || path.startsWith("/admin") || path.startsWith("/ban-to-chuc")) return path;
+    const separator = path.includes("?") ? "&" : "?";
+    return `${path}${separator}role=${currentRole}${organizerParam ? `&organizer=${organizerParam}` : ""}`;
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
