@@ -108,13 +108,6 @@ const Navbar = () => {
 
         {isLoggedIn ? (
           <div className="hidden lg:flex items-center gap-3">
-            {panelPath && !isCustomerRole && (
-              <Link to={panelPath}>
-                <Button variant="outline" size="lg" className="gap-2">
-                  Quay lại Panel
-                </Button>
-              </Link>
-            )}
 
             <div className="relative" ref={profileRef}>
               <button
