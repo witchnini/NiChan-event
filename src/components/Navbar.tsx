@@ -22,7 +22,6 @@ const customerLinks = [
   { label: "Đánh giá", path: "/dashboard/danh-gia" },
 ];
 
-// Mock customer profile data
 const customerProfile = {
   name: "Nguyễn Thanh Hà",
   email: "ha@gmail.com",
@@ -30,8 +29,6 @@ const customerProfile = {
   memberSince: "01/2025",
   events: 2,
 };
-
-
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -59,7 +56,6 @@ const Navbar = () => {
 
   const links = isCustomer ? customerLinks : navLinks;
 
-  // Close profile dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
@@ -78,7 +74,6 @@ const Navbar = () => {
           <span className="font-serif text-headline-md text-foreground font-light">Events</span>
         </Link>
 
-        {/* Desktop nav */}
         <div className="hidden lg:flex items-center gap-8">
           {links.map((link) => (
             <Link
@@ -94,10 +89,9 @@ const Navbar = () => {
           ))}
         </div>
 
-        {/* Desktop right side */}
         {isLoggedIn ? (
           <div className="hidden lg:flex items-center gap-3">
-            {panelPath && !isCustomer && (
+            {panelPath && !isCustomerRole && (
               <Link to={panelPath}>
                 <Button variant="outline" size="lg" className="gap-2">
                   Quay lại Panel
@@ -105,7 +99,6 @@ const Navbar = () => {
               </Link>
             )}
 
-            {/* Profile dropdown */}
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
@@ -132,7 +125,6 @@ const Navbar = () => {
                     transition={{ duration: 0.15 }}
                     className="absolute right-0 top-full mt-2 w-72 bg-background rounded-2xl shadow-ambient-lg border border-border overflow-hidden z-50"
                   >
-                    {/* Profile header */}
                     <div className="p-5 bg-surface-low">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-body font-bold text-lg">
@@ -149,7 +141,6 @@ const Navbar = () => {
                       </div>
                     </div>
 
-                    {/* Profile info */}
                     {isCustomerRole && (
                       <div className="p-4 space-y-3 border-b border-border">
                         <div className="flex items-center gap-3 text-sm font-body">
@@ -171,15 +162,14 @@ const Navbar = () => {
                       </div>
                     )}
 
-                    {/* Actions */}
                     <div className="p-2">
-                      {panelPath && !isCustomer && (
+                      {panelPath && !isCustomerRole && (
                         <Link to={panelPath} onClick={() => setProfileOpen(false)}
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
                           <Settings size={14} /> Quay lại Panel
                         </Link>
                       )}
-                      {isCustomer && (
+                      {isCustomerRole && (
                         <>
                           <Link to="/dashboard/ho-so" onClick={() => setProfileOpen(false)}
                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
@@ -216,7 +206,6 @@ const Navbar = () => {
           </div>
         )}
 
-        {/* Mobile toggle */}
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="lg:hidden text-foreground"
@@ -225,7 +214,6 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* Mobile menu */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -266,12 +254,26 @@ const Navbar = () => {
               ))}
               {isLoggedIn ? (
                 <>
-                  {panelPath && !isCustomer && (
+                  {panelPath && !isCustomerRole && (
                     <Link to={panelPath} onClick={() => setIsOpen(false)}>
                       <Button variant="outline" size="lg" className="w-full mt-2">
                         Quay lại Panel
                       </Button>
                     </Link>
+                  )}
+                  {isCustomerRole && (
+                    <>
+                      <Link to="/dashboard/ho-so" onClick={() => setIsOpen(false)}>
+                        <Button variant="outline" size="lg" className="w-full mt-2 gap-2">
+                          <User size={16} /> Hồ sơ cá nhân
+                        </Button>
+                      </Link>
+                      <Link to="/dashboard" onClick={() => setIsOpen(false)}>
+                        <Button variant="tertiary" size="lg" className="w-full gap-2">
+                          <Settings size={16} /> Dashboard
+                        </Button>
+                      </Link>
+                    </>
                   )}
                   <Button variant="tertiary" size="lg" className="w-full mt-2 gap-2" onClick={() => { setIsOpen(false); handleLogout(); }}>
                     <LogOut size={16} /> Đăng xuất
