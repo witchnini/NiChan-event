@@ -251,7 +251,7 @@ const Navbar = () => {
               {links.map((link) => (
                 <Link
                   key={link.path}
-                  to={link.path}
+                  to={appendRole(link.path)}
                   onClick={() => setIsOpen(false)}
                   className={`font-body text-base py-2 transition-colors ${location.pathname === link.path
                     ? "text-primary font-semibold"
