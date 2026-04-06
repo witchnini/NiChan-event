@@ -103,21 +103,6 @@ const CustomerDashboard = () => {
                   Gửi yêu cầu mới <ArrowRight size={16} />
                 </Button>
               </Link>
-              <Link to="/dashboard/hop-dong">
-                <Button variant="outline" className="w-full">
-                  Xem hợp đồng
-                </Button>
-              </Link>
-              <Link to="/dashboard/danh-gia">
-                <Button variant="outline" className="w-full">
-                  <Star size={16} /> Đánh giá sự kiện
-                </Button>
-              </Link>
-              <Link to="/dashboard/ho-so">
-                <Button variant="outline" className="w-full">
-                  <User size={16} /> Hồ sơ cá nhân
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
