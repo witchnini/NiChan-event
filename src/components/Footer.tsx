@@ -1,77 +1,118 @@
 import { Link } from "react-router-dom";
-import { Heart, Mail, Phone, MapPin } from "lucide-react";
+import { Heart, Mail, Phone, MapPin, Instagram, Facebook, Youtube } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-surface-low py-20">
-      <div className="container mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-          {/* Brand */}
-          <div className="lg:col-span-1">
-            <Link to="/" className="inline-block mb-6">
-              <span className="font-serif text-headline-md text-primary font-bold">NiChan</span>
-              <span className="font-serif text-headline-md text-foreground font-light"> Events</span>
-            </Link>
-            <p className="text-muted-foreground font-body leading-relaxed">
-              Biến mọi khoảnh khắc thành kỷ niệm vĩnh cửu. Chúng tôi tạo nên những sự kiện đẹp như tranh vẽ.
+    <footer className="relative overflow-hidden">
+      {/* Top decorative divider */}
+      <div className="h-1 gradient-primary" />
+
+      {/* Main footer */}
+      <div className="bg-[hsl(50_10%_12%)] text-[hsl(40_45%_90%)]">
+        <div className="container mx-auto px-6 pt-16 pb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+            {/* Brand */}
+            <div className="lg:col-span-1">
+              <Link to="/" className="inline-block mb-5">
+                <span className="font-serif text-headline-md text-primary font-bold">NiChan</span>
+                <span className="font-serif text-headline-md text-[hsl(40_45%_90%)] font-light"> Events</span>
+              </Link>
+              <p className="text-[hsl(40_20%_65%)] font-body leading-relaxed text-sm mb-6">
+                Biến mọi khoảnh khắc thành kỷ niệm vĩnh cửu. Chúng tôi tạo nên những sự kiện đẹp như tranh vẽ.
+              </p>
+              {/* Social icons */}
+              <div className="flex items-center gap-3">
+                {[
+                  { icon: Facebook, label: "Facebook" },
+                  { icon: Instagram, label: "Instagram" },
+                  { icon: Youtube, label: "Youtube" },
+                ].map(({ icon: Icon, label }) => (
+                  <a
+                    key={label}
+                    href="#"
+                    aria-label={label}
+                    className="w-9 h-9 rounded-full border border-[hsl(40_20%_25%)] flex items-center justify-center text-[hsl(40_20%_55%)] hover:text-primary hover:border-primary transition-colors"
+                  >
+                    <Icon size={16} />
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h4 className="font-serif text-base font-semibold mb-5 text-[hsl(40_45%_92%)] tracking-editorial text-xs">Khám phá</h4>
+              <ul className="space-y-3">
+                {[
+                  { label: "Dịch vụ", path: "/dich-vu" },
+                  { label: "Portfolio", path: "/portfolio" },
+                  { label: "Blog", path: "/blog" },
+                  { label: "Giới thiệu", path: "/gioi-thieu" },
+                  { label: "Liên hệ", path: "/lien-he" },
+                ].map((link) => (
+                  <li key={link.path}>
+                    <Link
+                      to={link.path}
+                      className="text-[hsl(40_20%_55%)] hover:text-primary transition-colors font-body text-sm"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Services */}
+            <div>
+              <h4 className="font-serif text-base font-semibold mb-5 text-[hsl(40_45%_92%)] tracking-editorial text-xs">Dịch vụ</h4>
+              <ul className="space-y-3">
+                {["Tiệc cưới", "Khai trương", "Hội nghị", "Gala Dinner", "Road Show"].map((s) => (
+                  <li key={s}>
+                    <span className="text-[hsl(40_20%_55%)] font-body text-sm">{s}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h4 className="font-serif text-base font-semibold mb-5 text-[hsl(40_45%_92%)] tracking-editorial text-xs">Liên hệ</h4>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[hsl(355_63%_42%/0.15)] flex items-center justify-center shrink-0 mt-0.5">
+                    <MapPin size={14} className="text-primary" />
+                  </div>
+                  <span className="text-[hsl(40_20%_55%)] font-body text-sm">Đông Phương - Đông Hưng - Thái Bình</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[hsl(355_63%_42%/0.15)] flex items-center justify-center shrink-0">
+                    <Phone size={14} className="text-primary" />
+                  </div>
+                  <span className="text-[hsl(40_20%_55%)] font-body text-sm">0123 456 789</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[hsl(355_63%_42%/0.15)] flex items-center justify-center shrink-0">
+                    <Mail size={14} className="text-primary" />
+                  </div>
+                  <span className="text-[hsl(40_20%_55%)] font-body text-sm">hello@nichanevents.vn</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div className="mt-14 pt-6 border-t border-[hsl(40_10%_20%)] flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-[hsl(40_15%_40%)] font-body text-xs flex items-center gap-1">
+              Made with <Heart size={12} className="text-primary fill-primary" /> by NiChan Events © 2026
             </p>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h4 className="font-serif text-lg font-semibold mb-6 text-foreground">Khám phá</h4>
-            <ul className="space-y-3">
-              {[
-                { label: "Dịch vụ", path: "/dich-vu" },
-                { label: "Portfolio", path: "/portfolio" },
-                { label: "Blog", path: "/blog" },
-                { label: "Giới thiệu", path: "/gioi-thieu" },
-              ].map((link) => (
-                <li key={link.path}>
-                  <Link to={link.path} className="text-muted-foreground hover:text-primary transition-colors font-body text-sm">
-                    {link.label}
-                  </Link>
-                </li>
+            <div className="flex items-center gap-6">
+              {["Chính sách bảo mật", "Điều khoản sử dụng"].map((text) => (
+                <a key={text} href="#" className="text-[hsl(40_15%_40%)] hover:text-primary transition-colors font-body text-xs">
+                  {text}
+                </a>
               ))}
-            </ul>
+            </div>
           </div>
-
-          {/* Services */}
-          <div>
-            <h4 className="font-serif text-lg font-semibold mb-6 text-foreground">Dịch vụ</h4>
-            <ul className="space-y-3">
-              {["Tiệc cưới", "Khai trương", "Hội nghị", "Gala Dinner", "Road Show"].map((s) => (
-                <li key={s}>
-                  <span className="text-muted-foreground font-body text-sm">{s}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h4 className="font-serif text-lg font-semibold mb-6 text-foreground">Liên hệ</h4>
-            <ul className="space-y-4">
-              <li className="flex items-start gap-3">
-                <MapPin size={18} className="text-primary mt-0.5 shrink-0" />
-                <span className="text-muted-foreground font-body text-sm">Đông Phương- Đông Hưng- Thái Bình</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <Phone size={18} className="text-primary shrink-0" />
-                <span className="text-muted-foreground font-body text-sm">0123 456 789</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <Mail size={18} className="text-primary shrink-0" />
-                <span className="text-muted-foreground font-body text-sm">hello@nichanevents.vn</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="mt-16 pt-8 text-center" style={{ borderTop: '1px solid hsl(var(--outline-variant) / 0.2)' }}>
-          <p className="text-muted-foreground font-body text-sm flex items-center justify-center gap-1">
-            Made with <Heart size={14} className="text-primary fill-primary" /> by NiChan Events © 2026
-          </p>
         </div>
       </div>
     </footer>
