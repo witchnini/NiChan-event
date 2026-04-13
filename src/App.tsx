@@ -9,6 +9,7 @@ import Index from "./pages/Index.tsx";
 import Services from "./pages/Services.tsx";
 import ServiceDetail from "./pages/ServiceDetail.tsx";
 import Portfolio from "./pages/Portfolio.tsx";
+import PortfolioDetail from "./pages/PortfolioDetail.tsx";
 import Blog from "./pages/Blog.tsx";
 import BlogDetail from "./pages/BlogDetail.tsx";
 import Contact from "./pages/Contact.tsx";
@@ -102,6 +103,7 @@ const App = () => (
           <Route path="/dich-vu" element={<PublicLayout><Services /></PublicLayout>} />
           <Route path="/dich-vu/:slug" element={<PublicLayout><ServiceDetail /></PublicLayout>} />
           <Route path="/portfolio" element={<PublicLayout><Portfolio /></PublicLayout>} />
+          <Route path="/portfolio/:slug" element={<PublicLayout><PortfolioDetail /></PublicLayout>} />
           <Route path="/blog" element={<PublicLayout><Blog /></PublicLayout>} />
           <Route path="/blog/:id" element={<PublicLayout><BlogDetail /></PublicLayout>} />
           <Route path="/lien-he" element={<PublicLayout><Contact /></PublicLayout>} />
