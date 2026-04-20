@@ -402,10 +402,9 @@ export const mockAdminUsers: AdminUser[] = [
   { id: 1, name: "Admin Chính", email: "admin@eternal.vn", phone: "0901111111", role: "Admin", status: "Hoạt động", lastLogin: "24/03/2026 10:30", events: "—" },
   { id: 2, name: "Nguyễn Thị Lan", email: "lan@eternal.vn", phone: "0901234567", role: "Event Manager", status: "Hoạt động", lastLogin: "24/03/2026 09:15", events: "12" },
   { id: 3, name: "Trần Văn Đức", email: "duc@eternal.vn", phone: "0912345678", role: "Event Manager", status: "Hoạt động", lastLogin: "23/03/2026 17:45", events: "8" },
-  { id: 4, name: "Phạm Thị Hoa", email: "hoa@eternal.vn", phone: "0923456789", role: "Staff", status: "Hoạt động", lastLogin: "24/03/2026 08:00", events: "15" },
+  { id: 4, name: "Phạm Thị Hoa", email: "hoa@eternal.vn", phone: "0923456789", role: "Customer", status: "Hoạt động", lastLogin: "24/03/2026 08:00", events: "15" },
   { id: 5, name: "Nguyễn Thanh Hà", email: "ha@gmail.com", phone: "0934567890", role: "Customer", status: "Hoạt động", lastLogin: "22/03/2026 14:30", events: "2" },
   { id: 6, name: "Trần Minh Đức", email: "minhduc@corp.vn", phone: "0945678901", role: "Customer", status: "Hoạt động", lastLogin: "20/03/2026 11:00", events: "1" },
-  { id: 7, name: "Lê Văn Tùng", email: "tung@eternal.vn", phone: "0956789012", role: "Staff", status: "Vô hiệu hóa", lastLogin: "01/02/2026", events: "5" },
 ];
 
 export const mockAdminContracts: AdminContract[] = [

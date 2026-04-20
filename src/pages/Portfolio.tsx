@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Users, MapPin, Calendar } from "lucide-react";
+import { useAppendRole } from "@/hooks/useAppendRole";
 import SectionHeading from "@/components/SectionHeading";
 import portfolio1 from "@/assets/portfolio-1.jpg";
 import portfolio2 from "@/assets/portfolio-2.jpg";
@@ -23,6 +24,7 @@ const projects = [
 
 const Portfolio = () => {
   const [active, setActive] = useState("Tất cả");
+  const appendRole = useAppendRole();
   const filtered = active === "Tất cả" ? projects : projects.filter((p) => p.category === active);
 
   return (
@@ -63,7 +65,7 @@ const Portfolio = () => {
                 layout
                 className="group"
               >
-                <Link to={`/portfolio/${project.slug}`}>
+                <Link to={appendRole(`/portfolio/${project.slug}`)}>
                 <div className="bg-surface-lowest rounded-xl overflow-hidden shadow-ambient hover:shadow-ambient-lg transition-all duration-500 cursor-pointer">
                   <div className="aspect-[4/3] overflow-hidden relative">
                     <img src={project.image} alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy" />

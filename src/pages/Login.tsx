@@ -1,23 +1,35 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import heroImg from "@/assets/hero-wedding.jpg";
+import { useAuth } from "@/contexts/AuthContext";
+import { ApiException } from "@/services/apiClient";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<"customer" | "organizer">("customer");
+  const [error, setError] = useState("");
+  const { login, isLoading } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (role === "organizer") {
-      window.location.href = "/ban-to-chuc";
-    } else {
-      window.location.href = "/dashboard";
+    setError("");
+    try {
+      const { role } = await login(email, password);
+      if (role === "admin") navigate("/admin");
+      else if (role === "organizer") navigate("/ban-to-chuc");
+      else navigate("/dashboard");
+    } catch (err) {
+      if (err instanceof ApiException) {
+        setError(err.message);
+      } else {
+        setError("Có lỗi xảy ra, vui lòng thử lại.");
+      }
     }
   };
 
@@ -50,19 +62,6 @@ const Login = () => {
           <h2 className="font-serif text-display-sm text-foreground mb-2">Đăng nhập</h2>
           <p className="font-body text-muted-foreground mb-8">Chào mừng bạn trở lại!</p>
 
-          {/* Role toggle */}
-          <div className="flex gap-1 mb-8 p-1 rounded-xl bg-surface-low">
-            {([
-              { key: "customer" as const, label: "Khách hàng" },
-              { key: "organizer" as const, label: "Ban tổ chức" },
-            ]).map(r => (
-              <button key={r.key} onClick={() => setRole(r.key)}
-                className={`flex-1 py-2.5 rounded-lg font-body text-sm transition-all ${role === r.key ? "bg-background shadow-ambient text-foreground font-semibold" : "text-muted-foreground"}`}>
-                {r.label}
-              </button>
-            ))}
-          </div>
-
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="font-body text-sm text-foreground mb-2 block">Email</label>
@@ -73,6 +72,7 @@ const Login = () => {
                 placeholder="email@example.com"
                 className="py-5 rounded-xl bg-surface-lowest font-body border-none"
                 required
+                disabled={isLoading}
               />
             </div>
             <div>
@@ -85,6 +85,7 @@ const Login = () => {
                   placeholder="••••••••"
                   className="py-5 rounded-xl bg-surface-lowest font-body border-none pr-12"
                   required
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
@@ -96,6 +97,12 @@ const Login = () => {
               </div>
             </div>
 
+            {error && (
+              <p className="font-body text-sm text-destructive bg-destructive/10 px-4 py-2.5 rounded-lg">
+                {error}
+              </p>
+            )}
+
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 font-body text-sm text-muted-foreground">
                 <input type="checkbox" className="rounded" />
@@ -106,8 +113,8 @@ const Login = () => {
               </Link>
             </div>
 
-            <Button type="submit" variant="hero" className="w-full py-6 text-base">
-              Đăng nhập <LogIn size={18} />
+            <Button type="submit" variant="hero" className="w-full py-6 text-base" disabled={isLoading}>
+              {isLoading ? "Đang đăng nhập..." : (<>Đăng nhập <LogIn size={18} /></>)}
             </Button>
           </form>
 

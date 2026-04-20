@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Index from "./pages/Index.tsx";
 import Services from "./pages/Services.tsx";
 import ServiceDetail from "./pages/ServiceDetail.tsx";
@@ -49,7 +50,9 @@ import OrganizerNotifications from "./pages/organizer/OrganizerNotifications.tsx
 import OrganizerProfile from "./pages/organizer/OrganizerProfile.tsx";
 import CustomerProfile from "./pages/customer/CustomerProfile.tsx";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
+});
 
 const PublicLayout = ({ children }: { children: React.ReactNode }) => (
   <>
@@ -59,44 +62,73 @@ const PublicLayout = ({ children }: { children: React.ReactNode }) => (
   </>
 );
 
+const ProtectedRoute = ({
+  children,
+  allowedRoles,
+}: {
+  children: React.ReactNode;
+  allowedRoles?: string[];
+}) => {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/dang-nhap" replace />;
+  if (allowedRoles && user && !allowedRoles.includes(user.role))
+    return <Navigate to="/dang-nhap" replace />;
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Auth */}
-          <Route path="/dang-nhap" element={<Login />} />
-          <Route path="/dang-ky" element={<Register />} />
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Auth */}
+            <Route path="/dang-nhap" element={<Login />} />
+            <Route path="/dang-ky" element={<Register />} />
 
-          {/* Organizer Portal */}
-          <Route path="/ban-to-chuc" element={<OrganizerLayout />}>
-            <Route index element={<OrganizerDashboard />} />
-            <Route path="du-an" element={<OrganizerProjects />} />
-            <Route path="nhan-su" element={<OrganizerStaff />} />
-            <Route path="nha-cung-cap" element={<OrganizerVendors />} />
-            <Route path="ngan-sach" element={<OrganizerBudget />} />
-            <Route path="bao-cao" element={<OrganizerReports />} />
-            <Route path="thong-bao" element={<OrganizerNotifications />} />
-            <Route path="ho-so" element={<OrganizerProfile />} />
-          </Route>
+            {/* Organizer Portal */}
+            <Route
+              path="/ban-to-chuc"
+              element={
+                <ProtectedRoute allowedRoles={["organizer", "admin"]}>
+                  <OrganizerLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<OrganizerDashboard />} />
+              <Route path="du-an" element={<OrganizerProjects />} />
+              <Route path="nhan-su" element={<OrganizerStaff />} />
+              <Route path="nha-cung-cap" element={<OrganizerVendors />} />
+              <Route path="ngan-sach" element={<OrganizerBudget />} />
+              <Route path="bao-cao" element={<OrganizerReports />} />
+              <Route path="thong-bao" element={<OrganizerNotifications />} />
+              <Route path="ho-so" element={<OrganizerProfile />} />
+            </Route>
 
-          {/* Admin Panel */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="yeu-cau" element={<AdminRequests />} />
-            <Route path="nguoi-dung" element={<AdminUsers />} />
-            <Route path="noi-dung" element={<AdminContent />} />
-            <Route path="hop-dong" element={<AdminContracts />} />
-            <Route path="tai-chinh" element={<AdminFinance />} />
-            <Route path="bao-cao" element={<AdminReports />} />
-            <Route path="du-an" element={<AdminProjects />} />
-            <Route path="nhan-su" element={<AdminStaff />} />
-            <Route path="nha-cung-cap" element={<AdminVendors />} />
-            <Route path="thong-bao" element={<AdminNotifications />} />
-            <Route path="ho-so" element={<AdminProfile />} />
-          </Route>
+            {/* Admin Panel */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="yeu-cau" element={<AdminRequests />} />
+              <Route path="nguoi-dung" element={<AdminUsers />} />
+              <Route path="noi-dung" element={<AdminContent />} />
+              <Route path="hop-dong" element={<AdminContracts />} />
+              <Route path="tai-chinh" element={<AdminFinance />} />
+              <Route path="bao-cao" element={<AdminReports />} />
+              <Route path="du-an" element={<AdminProjects />} />
+              <Route path="nhan-su" element={<AdminStaff />} />
+              <Route path="nha-cung-cap" element={<AdminVendors />} />
+              <Route path="thong-bao" element={<AdminNotifications />} />
+              <Route path="ho-so" element={<AdminProfile />} />
+            </Route>
 
           {/* Public */}
           <Route path="/" element={<PublicLayout><Index /></PublicLayout>} />
@@ -109,18 +141,19 @@ const App = () => (
           <Route path="/lien-he" element={<PublicLayout><Contact /></PublicLayout>} />
           <Route path="/gioi-thieu" element={<PublicLayout><About /></PublicLayout>} />
 
-          {/* Customer */}
-          <Route path="/dashboard" element={<PublicLayout><CustomerDashboard /></PublicLayout>} />
-          <Route path="/dashboard/su-kien" element={<PublicLayout><MyEvents /></PublicLayout>} />
-          <Route path="/dashboard/su-kien/:id" element={<PublicLayout><EventTracking /></PublicLayout>} />
-          <Route path="/dashboard/hop-dong" element={<PublicLayout><MyContracts /></PublicLayout>} />
-          <Route path="/dashboard/danh-gia" element={<PublicLayout><ReviewRating /></PublicLayout>} />
-          <Route path="/dashboard/ho-so" element={<PublicLayout><CustomerProfile /></PublicLayout>} />
+            {/* Customer */}
+            <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["customer", "admin"]}><PublicLayout><CustomerDashboard /></PublicLayout></ProtectedRoute>} />
+            <Route path="/dashboard/su-kien" element={<ProtectedRoute allowedRoles={["customer", "admin"]}><PublicLayout><MyEvents /></PublicLayout></ProtectedRoute>} />
+            <Route path="/dashboard/su-kien/:id" element={<ProtectedRoute allowedRoles={["customer", "admin"]}><PublicLayout><EventTracking /></PublicLayout></ProtectedRoute>} />
+            <Route path="/dashboard/hop-dong" element={<ProtectedRoute allowedRoles={["customer", "admin"]}><PublicLayout><MyContracts /></PublicLayout></ProtectedRoute>} />
+            <Route path="/dashboard/danh-gia" element={<ProtectedRoute allowedRoles={["customer", "admin"]}><PublicLayout><ReviewRating /></PublicLayout></ProtectedRoute>} />
+            <Route path="/dashboard/ho-so" element={<ProtectedRoute allowedRoles={["customer", "admin"]}><PublicLayout><CustomerProfile /></PublicLayout></ProtectedRoute>} />
 
-          <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+            <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

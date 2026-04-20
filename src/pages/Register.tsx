@@ -1,24 +1,40 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, UserPlus } from "lucide-react";
 import heroImg from "@/assets/hero-wedding.jpg";
+import { useAuth } from "@/contexts/AuthContext";
+import { ApiException } from "@/services/apiClient";
 
 const Register = () => {
   const [formData, setFormData] = useState({
     name: "", email: "", phone: "", password: "", confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const { register, isLoading } = useAuth();
+  const navigate = useNavigate();
 
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    window.location.href = "/dashboard";
+    setError("");
+    if (formData.password !== formData.confirmPassword) {
+      setError("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+    try {
+      await register(formData);
+      navigate("/dashboard");
+    } catch (err) {
+      if (err instanceof ApiException) setError(err.message);
+      else setError("Có lỗi xảy ra, vui lòng thử lại.");
+    }
   };
 
   return (
@@ -80,13 +96,19 @@ const Register = () => {
               <Input type="password" value={formData.confirmPassword} onChange={(e) => updateField("confirmPassword", e.target.value)} placeholder="Nhập lại mật khẩu" className="py-5 rounded-xl bg-surface-lowest font-body border-none" required />
             </div>
 
+            {error && (
+              <p className="font-body text-sm text-destructive bg-destructive/10 px-4 py-2.5 rounded-lg">
+                {error}
+              </p>
+            )}
+
             <label className="flex items-start gap-2 font-body text-sm text-muted-foreground">
               <input type="checkbox" className="rounded mt-1" required />
               <span>Tôi đồng ý với <Link to="#" className="text-primary hover:underline">Điều khoản sử dụng</Link> và <Link to="#" className="text-primary hover:underline">Chính sách bảo mật</Link></span>
             </label>
 
-            <Button type="submit" variant="hero" className="w-full py-6 text-base">
-              Đăng ký <UserPlus size={18} />
+            <Button type="submit" variant="hero" className="w-full py-6 text-base" disabled={isLoading}>
+              {isLoading ? "Đang đăng ký..." : (<>Đăng ký <UserPlus size={18} /></>)}
             </Button>
           </form>
 

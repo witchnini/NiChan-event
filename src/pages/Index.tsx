@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useAppendRole } from "@/hooks/useAppendRole";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { ArrowRight, Star, Calendar, Users, Award, ChevronRight } from "lucide-react";
@@ -38,6 +39,7 @@ const portfolioItems = [
 ];
 
 const Index = () => {
+  const appendRole = useAppendRole();
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -83,12 +85,12 @@ const Index = () => {
               transition={{ delay: 0.8 }}
               className="flex flex-wrap gap-4"
             >
-              <Link to="/lien-he">
+              <Link to={appendRole("/lien-he")}>
                 <Button variant="hero" size="lg" className="text-base px-8 py-6">
                   Bắt đầu câu chuyện của bạn <ArrowRight size={18} />
                 </Button>
               </Link>
-              <Link to="/portfolio">
+              <Link to={appendRole("/portfolio")}>
                 <Button variant="tertiary" size="lg" className="text-base px-8 py-6">
                   Xem Portfolio
                 </Button>
@@ -146,7 +148,7 @@ const Index = () => {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15 }}
               >
-                <Link to={`/dich-vu/${service.slug}`} className="group block">
+                <Link to={appendRole(`/dich-vu/${service.slug}`)} className="group block">
                   <div className="relative overflow-hidden rounded-xl shadow-ambient">
                     <div className="aspect-[16/10] overflow-hidden">
                       <img
@@ -212,7 +214,7 @@ const Index = () => {
           </div>
 
           <div className="text-center mt-12">
-            <Link to="/portfolio">
+            <Link to={appendRole("/portfolio")}>
               <Button variant="tertiary" size="lg">
                 Xem tất cả dự án <ArrowRight size={16} />
               </Button>
@@ -270,7 +272,7 @@ const Index = () => {
             <p className="font-body text-muted-foreground text-lg mb-10 max-w-xl mx-auto">
               Hãy để chúng tôi lắng nghe ý tưởng của bạn và biến nó thành hiện thực.
             </p>
-            <Link to="/lien-he">
+            <Link to={appendRole("/lien-he")}>
               <Button variant="hero" size="lg" className="text-base px-10 py-6">
                 Gửi yêu cầu báo giá <ArrowRight size={18} />
               </Button>
