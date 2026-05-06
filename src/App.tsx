@@ -18,6 +18,7 @@ import About from "./pages/About.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
+import ForgotPassword from "./pages/ForgotPassword.tsx";
 // Customer
 import CustomerDashboard from "./pages/customer/CustomerDashboard.tsx";
 import MyEvents from "./pages/customer/MyEvents.tsx";
