@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { apiClient, ApiException } from "@/services/apiClient";
+import { apiClient } from "@/services/apiClient";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,7 +18,7 @@ type AuthContextValue = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ role: string }>;
   register: (data: RegisterData) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 };
 
 type RegisterData = {
@@ -32,6 +32,10 @@ type RegisterData = {
 type LoginResponse = {
   accessToken: string;
   user: AuthUser;
+};
+
+type LogoutResponse = {
+  loggedOut: boolean;
 };
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -95,13 +99,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    if (token) {
+      try {
+        await apiClient.post<LogoutResponse>("/auth/logout");
+      } catch {
+        // Ignore logout API failures and clear local session anyway.
+      }
+    }
+
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setToken(null);
     setUser(null);
     window.location.href = "/dang-nhap";
-  }, []);
+  }, [token]);
 
   return (
     <AuthContext.Provider
