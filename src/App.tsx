@@ -88,6 +88,7 @@ const App = () => (
             {/* Auth */}
             <Route path="/dang-nhap" element={<Login />} />
             <Route path="/dang-ky" element={<Register />} />
+            <Route path="/quen-mat-khau" element={<ForgotPassword />} />
 
             {/* Organizer Portal */}
             <Route
