@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, User, ChevronDown, Mail, Phone, Calendar, Settings, Shield, LayoutDashboard } from "lucide-react";
+import { Menu, X, LogOut, User, ChevronDown, Mail, Settings, Shield, LayoutDashboard } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
-import { mockOrganizerAccounts } from "@/services/mockData";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navLinks = [
   { label: "Trang chủ", path: "/" },
@@ -22,56 +21,28 @@ const customerLinks = [
   { label: "Đánh giá", path: "/dashboard/danh-gia" },
 ];
 
-const customerProfile = {
-  name: "Nguyễn Thanh Hà",
-  email: "ha@gmail.com",
-  phone: "0934 567 890",
-  memberSince: "01/2025",
-  events: 2,
-};
-
-const adminProfile = {
-  name: "Admin NiChan",
-  email: "admin@nichan.vn",
-  phone: "0900 000 001",
-  role: "Quản trị viên",
-  projects: 12,
-};
+const roleLabels = {
+  admin: "Quản trị viên",
+  organizer: "Ban tổ chức",
+  customer: "Khách hàng",
+} as const;
 
 const Navbar = () => {
+  const { user, isAuthenticated, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const roleParam = searchParams.get("role");
 
-  const isCustomer = location.pathname.startsWith("/dashboard");
-  const isLoggedIn = isCustomer || roleParam === "admin" || roleParam === "organizer" || roleParam === "customer";
+  const isCustomerRoute = location.pathname.startsWith("/dashboard");
+  const currentRole = user?.role ?? null;
+  const roleLabel = currentRole ? roleLabels[currentRole] : "";
+  const panelPath =
+    currentRole === "customer" ? "/dashboard" : currentRole === "admin" ? "/admin" : currentRole === "organizer" ? "/ban-to-chuc" : "";
+  const profilePath =
+    currentRole === "customer" ? "/dashboard/ho-so" : currentRole === "admin" ? "/admin/ho-so" : currentRole === "organizer" ? "/ban-to-chuc/ho-so" : "/";
 
-  const organizerParam = searchParams.get("organizer");
-  const currentOrganizer = organizerParam ? mockOrganizerAccounts.find(o => o.id === organizerParam) ?? null : null;
-
-  const roleLabel = isCustomer || roleParam === "customer" ? "Khách hàng" : roleParam === "admin" ? "Quản trị viên" : roleParam === "organizer" ? "Ban tổ chức" : "";
-  const panelPath = isCustomer ? "/dashboard" : roleParam === "customer" ? "/dashboard" : roleParam === "admin" ? "/admin" : roleParam === "organizer" ? `/ban-to-chuc${organizerParam ? `?organizer=${organizerParam}` : ""}` : "";
-  const isCustomerRole = isCustomer || roleParam === "customer";
-  const isOrganizerRole = roleParam === "organizer";
-  const currentRole = isCustomer ? "customer" : roleParam;
-  const roleQuery = isLoggedIn && currentRole ? `?role=${currentRole}${organizerParam ? `&organizer=${organizerParam}` : ""}` : "";
-
-  const handleLogout = () => {
-    toast.success("Đã đăng xuất");
-    window.location.href = "/dang-nhap";
-  };
-
-  const links = isCustomer ? customerLinks : navLinks;
-
-  const appendRole = (path: string) => {
-    if (!isLoggedIn || !currentRole) return path;
-    if (path.startsWith("/dashboard") || path.startsWith("/admin") || path.startsWith("/ban-to-chuc")) return path;
-    const separator = path.includes("?") ? "&" : "?";
-    return `${path}${separator}role=${currentRole}${organizerParam ? `&organizer=${organizerParam}` : ""}`;
-  };
+  const links = isCustomerRoute ? customerLinks : navLinks;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -83,10 +54,18 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleLogout = async () => {
+    setProfileOpen(false);
+    setIsOpen(false);
+    await logout();
+  };
+
+  const avatarText = user?.displayName?.trim()?.charAt(0)?.toUpperCase() || "U";
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass">
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-        <Link to={appendRole("/")} className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <span className="font-serif text-headline-md text-primary font-bold">NiChan</span>
           <span className="font-serif text-headline-md text-foreground font-light">Events</span>
         </Link>
@@ -95,32 +74,28 @@ const Navbar = () => {
           {links.map((link) => (
             <Link
               key={link.path}
-              to={appendRole(link.path)}
-              className={`font-body text-sm tracking-wide transition-colors duration-300 hover:text-primary ${location.pathname === link.path
-                ? "text-primary font-semibold"
-                : "text-muted-foreground"
-                }`}
+              to={link.path}
+              className={`font-body text-sm tracking-wide transition-colors duration-300 hover:text-primary ${
+                location.pathname === link.path ? "text-primary font-semibold" : "text-muted-foreground"
+              }`}
             >
               {link.label}
             </Link>
           ))}
         </div>
 
-        {isLoggedIn ? (
+        {isAuthenticated && user ? (
           <div className="hidden lg:flex items-center gap-3">
-
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-surface-low transition-all"
               >
                 <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-body font-bold text-sm">
-                  {isCustomerRole ? customerProfile.name[0] : (isOrganizerRole && currentOrganizer) ? currentOrganizer.avatar : <User size={16} />}
+                  {avatarText}
                 </div>
                 <div className="text-left hidden xl:block">
-                  <p className="font-body text-sm font-semibold text-foreground leading-tight">
-                    {isCustomerRole ? customerProfile.name : (isOrganizerRole && currentOrganizer) ? currentOrganizer.name : roleLabel}
-                  </p>
+                  <p className="font-body text-sm font-semibold text-foreground leading-tight">{user.displayName}</p>
                   <p className="font-body text-xs text-muted-foreground leading-tight">{roleLabel}</p>
                 </div>
                 <ChevronDown size={14} className={`text-muted-foreground transition-transform ${profileOpen ? "rotate-180" : ""}`} />
@@ -138,12 +113,10 @@ const Navbar = () => {
                     <div className="p-5 bg-surface-low">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-body font-bold text-lg">
-                          {isCustomerRole ? customerProfile.name[0] : (isOrganizerRole && currentOrganizer) ? currentOrganizer.avatar : roleLabel[0]}
+                          {avatarText}
                         </div>
                         <div>
-                          <p className="font-body text-sm font-semibold text-foreground">
-                            {isCustomerRole ? customerProfile.name : (isOrganizerRole && currentOrganizer) ? currentOrganizer.name : roleLabel}
-                          </p>
+                          <p className="font-body text-sm font-semibold text-foreground">{user.displayName}</p>
                           <span className="px-2 py-0.5 rounded-full text-xs font-body font-semibold bg-primary/10 text-primary">
                             {roleLabel}
                           </span>
@@ -151,77 +124,39 @@ const Navbar = () => {
                       </div>
                     </div>
 
-                    {/* Contact info section */}
                     <div className="p-4 space-y-3 border-b border-border">
                       <div className="flex items-center gap-3 text-sm font-body">
                         <Mail size={14} className="text-muted-foreground shrink-0" />
-                        <span className="text-foreground">
-                          {isCustomerRole ? customerProfile.email : (isOrganizerRole && currentOrganizer) ? currentOrganizer.email : adminProfile.email}
-                        </span>
+                        <span className="text-foreground">{user.email}</span>
                       </div>
                       <div className="flex items-center gap-3 text-sm font-body">
-                        <Phone size={14} className="text-muted-foreground shrink-0" />
-                        <span className="text-foreground">
-                          {isCustomerRole ? customerProfile.phone : (isOrganizerRole && currentOrganizer) ? currentOrganizer.phone : adminProfile.phone}
-                        </span>
+                        <Shield size={14} className="text-muted-foreground shrink-0" />
+                        <span className="text-muted-foreground">{roleLabel}</span>
                       </div>
-                      {isCustomerRole && (
-                        <>
-                          <div className="flex items-center gap-3 text-sm font-body">
-                            <Calendar size={14} className="text-muted-foreground shrink-0" />
-                            <span className="text-muted-foreground">Thành viên từ {customerProfile.memberSince}</span>
-                          </div>
-                          <div className="flex items-center gap-3 text-sm font-body">
-                            <Settings size={14} className="text-muted-foreground shrink-0" />
-                            <span className="text-muted-foreground">{customerProfile.events} sự kiện</span>
-                          </div>
-                        </>
-                      )}
-                      {isOrganizerRole && currentOrganizer && (
-                        <div className="flex items-center gap-3 text-sm font-body">
-                          <Shield size={14} className="text-muted-foreground shrink-0" />
-                          <span className="text-muted-foreground">{currentOrganizer.role}</span>
-                        </div>
-                      )}
-                      {roleParam === "admin" && (
-                        <div className="flex items-center gap-3 text-sm font-body">
-                          <Shield size={14} className="text-muted-foreground shrink-0" />
-                          <span className="text-muted-foreground">{adminProfile.projects} dự án đang quản lý</span>
-                        </div>
-                      )}
                     </div>
 
                     <div className="p-2">
-                      {/* Profile link */}
-                      {isCustomerRole && (
-                        <Link to="/dashboard/ho-so" onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
-                          <User size={14} /> Hồ sơ cá nhân
-                        </Link>
-                      )}
-                      {roleParam === "admin" && (
-                        <Link to="/admin/ho-so" onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
-                          <User size={14} /> Hồ sơ cá nhân
-                        </Link>
-                      )}
-                      {isOrganizerRole && (
-                        <Link to={`/ban-to-chuc/ho-so${organizerParam ? `?organizer=${organizerParam}` : ""}`} onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
-                          <User size={14} /> Hồ sơ cá nhân
-                        </Link>
-                      )}
-                      {/* Panel link */}
+                      <Link
+                        to={profilePath}
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full"
+                      >
+                        <User size={14} /> Hồ sơ cá nhân
+                      </Link>
                       {panelPath && (
-                        <Link to={panelPath} onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full">
-                          <LayoutDashboard size={14} /> {isCustomerRole ? "Dashboard" : "Quay lại Panel"}
+                        <Link
+                          to={panelPath}
+                          onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full"
+                        >
+                          <LayoutDashboard size={14} /> {currentRole === "customer" ? "Dashboard" : "Quay lại Panel"}
                         </Link>
                       )}
-                      {/* Divider */}
                       <div className="my-1 border-t border-border" />
-                      <button onClick={() => { setProfileOpen(false); handleLogout(); }}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-destructive hover:bg-destructive/10 transition-all w-full">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-destructive hover:bg-destructive/10 transition-all w-full"
+                      >
                         <LogOut size={14} /> Đăng xuất
                       </button>
                     </div>
@@ -245,10 +180,7 @@ const Navbar = () => {
           </div>
         )}
 
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="lg:hidden text-foreground"
-        >
+        <button onClick={() => setIsOpen(!isOpen)} className="lg:hidden text-foreground">
           {isOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
@@ -262,59 +194,47 @@ const Navbar = () => {
             className="lg:hidden glass overflow-hidden"
           >
             <div className="container mx-auto px-6 py-6 flex flex-col gap-4">
-              {isLoggedIn && (
+              {isAuthenticated && user && (
                 <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-surface-low mb-2">
                   <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-body font-bold">
-                    {isCustomerRole ? customerProfile.name[0] : (isOrganizerRole && currentOrganizer) ? currentOrganizer.avatar : <User size={18} />}
+                    {avatarText}
                   </div>
                   <div>
-                    <p className="font-body text-sm font-semibold text-foreground">
-                      {isCustomerRole ? customerProfile.name : (isOrganizerRole && currentOrganizer) ? currentOrganizer.name : roleLabel}
-                    </p>
+                    <p className="font-body text-sm font-semibold text-foreground">{user.displayName}</p>
                     <p className="font-body text-xs text-muted-foreground">{roleLabel}</p>
-                    {isCustomerRole && (
-                      <p className="font-body text-xs text-muted-foreground">{customerProfile.email}</p>
-                    )}
+                    <p className="font-body text-xs text-muted-foreground">{user.email}</p>
                   </div>
                 </div>
               )}
+
               {links.map((link) => (
                 <Link
                   key={link.path}
-                  to={appendRole(link.path)}
+                  to={link.path}
                   onClick={() => setIsOpen(false)}
-                  className={`font-body text-base py-2 transition-colors ${location.pathname === link.path
-                    ? "text-primary font-semibold"
-                    : "text-muted-foreground"
-                    }`}
+                  className={`font-body text-base py-2 transition-colors ${
+                    location.pathname === link.path ? "text-primary font-semibold" : "text-muted-foreground"
+                  }`}
                 >
                   {link.label}
                 </Link>
               ))}
-              {isLoggedIn ? (
+
+              {isAuthenticated && user ? (
                 <>
-                  {panelPath && !isCustomerRole && (
+                  <Link to={profilePath} onClick={() => setIsOpen(false)}>
+                    <Button variant="outline" size="lg" className="w-full mt-2 gap-2">
+                      <User size={16} /> Hồ sơ cá nhân
+                    </Button>
+                  </Link>
+                  {panelPath && (
                     <Link to={panelPath} onClick={() => setIsOpen(false)}>
-                      <Button variant="outline" size="lg" className="w-full mt-2">
-                        Quay lại Panel
+                      <Button variant="tertiary" size="lg" className="w-full gap-2">
+                        <Settings size={16} /> {currentRole === "customer" ? "Dashboard" : "Quay lại Panel"}
                       </Button>
                     </Link>
                   )}
-                  {isCustomerRole && (
-                    <>
-                      <Link to="/dashboard/ho-so" onClick={() => setIsOpen(false)}>
-                        <Button variant="outline" size="lg" className="w-full mt-2 gap-2">
-                          <User size={16} /> Hồ sơ cá nhân
-                        </Button>
-                      </Link>
-                      <Link to="/dashboard" onClick={() => setIsOpen(false)}>
-                        <Button variant="tertiary" size="lg" className="w-full gap-2">
-                          <Settings size={16} /> Dashboard
-                        </Button>
-                      </Link>
-                    </>
-                  )}
-                  <Button variant="tertiary" size="lg" className="w-full mt-2 gap-2" onClick={() => { setIsOpen(false); handleLogout(); }}>
+                  <Button variant="tertiary" size="lg" className="w-full mt-2 gap-2" onClick={handleLogout}>
                     <LogOut size={16} /> Đăng xuất
                   </Button>
                 </>

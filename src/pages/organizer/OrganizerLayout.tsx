@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FolderKanban, Users, Building2, Wallet, FileBarChart,
-  Globe, LogOut, Menu, X, ChevronLeft, Bell
+  Globe, LogOut, Menu, X, ChevronLeft, Bell,
 } from "lucide-react";
 import { toast } from "sonner";
-import { mockOrganizerAccounts } from "@/services/mockData";
+import { apiClient } from "@/services/apiClient";
+import { useAuth } from "@/contexts/AuthContext";
 
 const sidebarItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/ban-to-chuc" },
@@ -18,27 +19,107 @@ const sidebarItems = [
   { label: "Thông báo", icon: Bell, path: "/ban-to-chuc/thong-bao" },
 ];
 
-import { mockOrganizerNotifications, type Notification } from "@/services/mockData";
+type OrganizerProfileResponse = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  phone?: string | null;
+  avatarUrl?: string | null;
+  organizerProfile?: {
+    fullName: string;
+    jobTitle: string;
+    address?: string | null;
+    bio?: string | null;
+  } | null;
+};
 
-const initialNotifications = mockOrganizerNotifications;
+type AppNotification = {
+  id: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+};
+
+const formatNotificationTime = (value: string) =>
+  new Date(value).toLocaleString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+  });
 
 const OrganizerLayout = () => {
+  const { logout, user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [profile, setProfile] = useState<OrganizerProfileResponse | null>(null);
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const organizerParam = searchParams.get("organizer");
-  const currentOrganizer = organizerParam
-    ? mockOrganizerAccounts.find(o => o.id === organizerParam) ?? null
-    : null;
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  useEffect(() => {
+    let cancelled = false;
 
-  const markAsRead = (id: number) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  const markAllRead = () => { setNotifications(prev => prev.map(n => ({ ...n, read: true }))); toast.success("Đã đánh dấu tất cả là đã đọc"); };
-  const handleLogout = () => { toast.success("Đã đăng xuất"); window.location.href = "/dang-nhap"; };
+    const load = async () => {
+      try {
+        const [profileData, notificationsData] = await Promise.all([
+          apiClient.get<OrganizerProfileResponse>("/organizer/profile"),
+          apiClient.get<AppNotification[]>("/organizer/notifications"),
+        ]);
+
+        if (cancelled) return;
+        setProfile(profileData);
+        setNotifications(notificationsData);
+      } catch {
+        if (!cancelled) {
+          setProfile(null);
+          setNotifications([]);
+        }
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const unreadNotifications = useMemo(
+    () => notifications.filter((notification) => !notification.isRead),
+    [notifications],
+  );
+
+  const displayName = profile?.organizerProfile?.fullName || profile?.displayName || user?.displayName || "Organizer";
+  const displayRole = profile?.organizerProfile?.jobTitle || "Ban tổ chức";
+  const avatarText = displayName.trim().charAt(0).toUpperCase();
+
+  const markAsRead = async (id: string) => {
+    setNotifications((prev) => prev.map((notification) => (
+      notification.id === id ? { ...notification, isRead: true } : notification
+    )));
+    try {
+      await apiClient.patch(`/organizer/notifications/${id}/read`);
+    } catch {
+      toast.error("Không thể cập nhật trạng thái thông báo");
+    }
+  };
+
+  const markAllRead = async () => {
+    const unreadIds = unreadNotifications.map((notification) => notification.id);
+    setNotifications((prev) => prev.map((notification) => ({ ...notification, isRead: true })));
+
+    try {
+      await Promise.all(unreadIds.map((id) => apiClient.patch(`/organizer/notifications/${id}/read`)));
+      toast.success("Đã đánh dấu tất cả là đã đọc");
+    } catch {
+      toast.error("Không thể cập nhật tất cả thông báo");
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+  };
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -55,7 +136,10 @@ const OrganizerLayout = () => {
         {sidebarItems.map((item) => {
           const isActive = location.pathname === item.path || (item.path !== "/ban-to-chuc" && location.pathname.startsWith(item.path));
           return (
-            <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)}
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm transition-all ${isActive ? "bg-secondary text-secondary-foreground font-semibold shadow-ambient" : "text-muted-foreground hover:text-foreground hover:bg-surface-low"}`}
             >
               <item.icon size={18} />
@@ -65,16 +149,15 @@ const OrganizerLayout = () => {
         })}
       </nav>
       <div className="p-3 space-y-1">
-        {/* Organizer info */}
-        {currentOrganizer && !collapsed && (
+        {profile && !collapsed && (
           <div className="px-3 py-2.5 mb-1 rounded-xl bg-surface-low">
-            <p className="font-body text-xs font-semibold text-foreground truncate">{currentOrganizer.name}</p>
-            <p className="font-body text-xs text-muted-foreground truncate">{currentOrganizer.role}</p>
-            <p className="font-body text-xs text-muted-foreground truncate">{currentOrganizer.email}</p>
+            <p className="font-body text-xs font-semibold text-foreground truncate">{displayName}</p>
+            <p className="font-body text-xs text-muted-foreground truncate">{displayRole}</p>
+            <p className="font-body text-xs text-muted-foreground truncate">{profile.email}</p>
           </div>
         )}
         <Link
-          to={`/?role=organizer${organizerParam ? `&organizer=${organizerParam}` : ""}`}
+          to="/"
           onClick={() => setMobileOpen(false)}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-muted-foreground hover:text-foreground hover:bg-surface-low transition-all"
         >
@@ -108,14 +191,14 @@ const OrganizerLayout = () => {
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileOpen(true)} className="lg:hidden text-foreground"><Menu size={22} /></button>
             <h2 className="font-serif text-foreground font-semibold text-lg hidden md:block">
-              {sidebarItems.find(i => location.pathname === i.path || (i.path !== "/ban-to-chuc" && location.pathname.startsWith(i.path)))?.label || "Ban tổ chức"}
+              {sidebarItems.find((item) => location.pathname === item.path || (item.path !== "/ban-to-chuc" && location.pathname.startsWith(item.path)))?.label || "Ban tổ chức"}
             </h2>
           </div>
           <div className="flex items-center gap-4">
             <div className="relative">
               <button onClick={() => setNotifOpen(!notifOpen)} className="relative text-muted-foreground hover:text-foreground">
                 <Bell size={20} />
-                {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-secondary text-secondary-foreground text-[10px] flex items-center justify-center font-bold">{unreadCount}</span>}
+                {unreadNotifications.length > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-secondary text-secondary-foreground text-[10px] flex items-center justify-center font-bold">{unreadNotifications.length}</span>}
               </button>
               <AnimatePresence>
                 {notifOpen && (
@@ -125,21 +208,27 @@ const OrganizerLayout = () => {
                       className="absolute right-0 top-full mt-2 w-80 bg-surface-lowest rounded-xl shadow-ambient-lg z-50 overflow-hidden">
                       <div className="flex items-center justify-between p-4 bg-surface-low">
                         <h3 className="font-serif font-semibold text-foreground text-sm">Thông báo</h3>
-                        {unreadCount > 0 && <button onClick={markAllRead} className="font-body text-xs text-secondary hover:underline">Đánh dấu tất cả</button>}
+                        {unreadNotifications.length > 0 && <button onClick={markAllRead} className="font-body text-xs text-secondary hover:underline">Đánh dấu tất cả</button>}
                       </div>
                       <div className="max-h-80 overflow-y-auto">
-                        {notifications.map(n => (
-                          <button key={n.id} onClick={() => markAsRead(n.id)}
-                            className={`w-full text-left p-4 border-b border-border hover:bg-surface-low transition-colors ${!n.read ? "bg-secondary/5" : ""}`}>
+                        {notifications.map((notification) => (
+                          <button
+                            key={notification.id}
+                            onClick={() => markAsRead(notification.id)}
+                            className={`w-full text-left p-4 border-b border-border hover:bg-surface-low transition-colors ${!notification.isRead ? "bg-secondary/5" : ""}`}
+                          >
                             <div className="flex items-start gap-3">
-                              {!n.read && <span className="w-2 h-2 rounded-full bg-secondary mt-1.5 shrink-0" />}
-                              <div className={!n.read ? "" : "ml-5"}>
-                                <p className={`font-body text-sm ${!n.read ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{n.text}</p>
-                                <p className="font-body text-xs text-muted-foreground mt-1">{n.time}</p>
+                              {!notification.isRead && <span className="w-2 h-2 rounded-full bg-secondary mt-1.5 shrink-0" />}
+                              <div className={!notification.isRead ? "" : "ml-5"}>
+                                <p className={`font-body text-sm ${!notification.isRead ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{notification.message}</p>
+                                <p className="font-body text-xs text-muted-foreground mt-1">{formatNotificationTime(notification.createdAt)}</p>
                               </div>
                             </div>
                           </button>
                         ))}
+                        {notifications.length === 0 && (
+                          <p className="p-4 font-body text-sm text-muted-foreground">Chưa có thông báo.</p>
+                        )}
                       </div>
                     </motion.div>
                   </>
@@ -148,14 +237,12 @@ const OrganizerLayout = () => {
             </div>
             <Link to="/ban-to-chuc/ho-so" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-body font-bold text-sm">
-                {currentOrganizer ? currentOrganizer.avatar : "O"}
+                {avatarText}
               </div>
-              {currentOrganizer && (
-                <div className="hidden md:block text-right">
-                  <p className="font-body text-xs font-semibold text-foreground leading-tight">{currentOrganizer.name}</p>
-                  <p className="font-body text-xs text-muted-foreground leading-tight">{currentOrganizer.role}</p>
-                </div>
-              )}
+              <div className="hidden md:block text-right">
+                <p className="font-body text-xs font-semibold text-foreground leading-tight">{displayName}</p>
+                <p className="font-body text-xs text-muted-foreground leading-tight">{displayRole}</p>
+              </div>
             </Link>
           </div>
         </header>

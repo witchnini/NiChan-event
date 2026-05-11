@@ -19,6 +19,7 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<{ role: string }>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 };
 
 type RegisterData = {
@@ -115,6 +116,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     window.location.href = "/dang-nhap";
   }, [token]);
 
+  const refreshUser = useCallback(async () => {
+    if (!localStorage.getItem(TOKEN_KEY)) return;
+    const latestUser = await apiClient.get<AuthUser>("/auth/me");
+    setUser(latestUser);
+    localStorage.setItem(USER_KEY, JSON.stringify(latestUser));
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -125,6 +133,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         login,
         register,
         logout,
+        refreshUser,
       }}
     >
       {children}

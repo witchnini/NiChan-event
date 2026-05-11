@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import SectionHeading from "@/components/SectionHeading";
+import { apiClient } from "@/services/apiClient";
+import { toast } from "sonner";
 
 const eventTypes = ["Tiệc cưới", "Khai trương", "Gala Dinner", "Hội nghị", "Road Show", "Kỷ niệm", "Online Event", "Khác"];
 const budgetRanges = ["Dưới 50 triệu", "50 - 100 triệu", "100 - 300 triệu", "300 - 500 triệu", "Trên 500 triệu"];
@@ -17,13 +19,84 @@ const Contact = () => {
     guests: "", budget: "", requirements: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submittedCode, setSubmittedCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
-    setSubmitted(true);
+  const normalizePhone = (value: string) => value.replace(/[^\d]/g, "");
+
+  const parseGuestCount = (value: string) => {
+    const normalized = value.replace(/[^\d]/g, "");
+    return normalized ? Number(normalized) : null;
+  };
+
+  const buildNote = () => {
+    const parts = [
+      formData.company.trim() ? `Cong ty: ${formData.company.trim()}` : null,
+      formData.eventName.trim() ? `Ten su kien: ${formData.eventName.trim()}` : null,
+      formData.requirements.trim() ? `Yeu cau: ${formData.requirements.trim()}` : null,
+    ].filter(Boolean);
+
+    return parts.length ? parts.join("\n") : null;
+  };
+
+  const validateStep = (currentStep = step) => {
+    if (currentStep === 1) {
+      const phone = normalizePhone(formData.phone);
+      if (!formData.name.trim() || !formData.email.trim() || !phone) {
+        toast.error("Vui long nhap ho ten, email va so dien thoai");
+        return false;
+      }
+      if (!/^0[3-9]\d{8}$/.test(phone)) {
+        toast.error("So dien thoai khong dung dinh dang Viet Nam");
+        return false;
+      }
+    }
+
+    if (currentStep === 2 && !formData.eventType.trim()) {
+      toast.error("Vui long chon loai su kien");
+      return false;
+    }
+
+    if (currentStep === 3 && !formData.budget.trim()) {
+      toast.error("Vui long chon ngan sach du kien");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleNext = () => {
+    if (validateStep()) setStep(step + 1);
+  };
+
+  const handleSubmit = async () => {
+    if (!validateStep(1) || !validateStep(2) || !validateStep(3)) return;
+
+    setSubmitting(true);
+    try {
+      const data = await apiClient.post<{ requestCode: string }>("/public/consultation-requests", {
+        customerName: formData.name.trim(),
+        phone: normalizePhone(formData.phone),
+        email: formData.email.trim(),
+        eventType: formData.eventType,
+        eventDate: formData.date ? new Date(`${formData.date}T00:00:00`).toISOString() : null,
+        guestCount: parseGuestCount(formData.guests),
+        budgetRange: formData.budget || null,
+        location: formData.location.trim() || null,
+        note: buildNote(),
+      });
+
+      setSubmittedCode(data.requestCode);
+      setSubmitted(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gui yeu cau that bai");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -35,6 +108,9 @@ const Contact = () => {
           <p className="font-body text-muted-foreground text-lg leading-relaxed">
             Yêu cầu của bạn đã được gửi thành công. Chúng tôi sẽ liên hệ lại trong vòng 24 giờ.
           </p>
+          {submittedCode && (
+            <p className="font-body text-sm text-primary font-semibold mt-4">Ma yeu cau: {submittedCode}</p>
+          )}
         </motion.div>
       </div>
     );
@@ -181,11 +257,11 @@ const Contact = () => {
                   </Button>
                 ) : <div />}
                 {step < 3 ? (
-                  <Button variant="hero" onClick={() => setStep(step + 1)}>
+                  <Button variant="hero" onClick={handleNext}>
                     Tiếp theo <ArrowRight size={16} />
                   </Button>
                 ) : (
-                  <Button variant="hero" onClick={handleSubmit}>
+                  <Button variant="hero" onClick={handleSubmit} disabled={submitting}>
                     Gửi yêu cầu <Send size={16} />
                   </Button>
                 )}
