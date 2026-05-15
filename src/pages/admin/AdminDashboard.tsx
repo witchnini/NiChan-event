@@ -38,6 +38,16 @@ const pieColors = [
   "hsl(38 20% 86%)",
 ];
 
+const requestStatuses: { value: string; label: string; color: string }[] = [
+  { value: "new",       label: "Mới",           color: "bg-primary/10 text-primary" },
+  { value: "reviewing", label: "Đang xem xét",  color: "bg-muted text-muted-foreground" },
+  { value: "quoted",    label: "Đã báo giá",    color: "bg-secondary/10 text-secondary" },
+  { value: "confirmed", label: "Đã xác nhận",   color: "bg-secondary/20 text-secondary" },
+  { value: "rejected",  label: "Từ chối",       color: "bg-destructive/10 text-destructive" },
+];
+const reqStatusLabel  = Object.fromEntries(requestStatuses.map(s => [s.value, s.label]));
+const reqStatusColor  = Object.fromEntries(requestStatuses.map(s => [s.value, s.color]));
+
 const formatMoney = (value: number) => `${Math.round(value / 1_000_000)}tr`;
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString("vi-VN") : "Chưa cập nhật");
 
@@ -172,12 +182,16 @@ const AdminDashboard = () => {
           </div>
           <div className="space-y-4">
             {data.recentRequests.map((req) => (
-              <div key={req.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
-                <div>
-                  <p className="font-body text-sm font-semibold text-foreground">{req.customerName}</p>
-                  <p className="font-body text-xs text-muted-foreground">{req.eventType} • {req.budgetRange || "Chưa có ngân sách"} • {formatDate(req.createdAt)}</p>
+              <div key={req.id} className="flex items-center justify-between py-3 border-b border-border last:border-0 gap-3">
+                <div className="min-w-0">
+                  <p className="font-body text-sm font-semibold text-foreground truncate">{req.customerName}</p>
+                  <p className="font-body text-xs text-muted-foreground truncate">
+                    {req.eventType} • {req.budgetRange || "Chưa có ngân sách"} • {formatDate(req.createdAt)}
+                  </p>
                 </div>
-                <span className="px-3 py-1 rounded-full text-xs font-body font-semibold bg-primary/10 text-primary">{req.status}</span>
+                <span className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-body font-semibold ${reqStatusColor[req.status] ?? "bg-muted text-muted-foreground"}`}>
+                  {reqStatusLabel[req.status] ?? req.status}
+                </span>
               </div>
             ))}
             {data.recentRequests.length === 0 && <p className="font-body text-sm text-muted-foreground">Chưa có yêu cầu mới.</p>}
