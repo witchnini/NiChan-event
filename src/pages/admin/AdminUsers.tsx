@@ -15,7 +15,7 @@ type ApiUser = {
   displayName: string;
   email: string;
   phone?: string | null;
-  role: "admin" | "organizer" | "customer" | "staff";
+  role: "admin" | "organizer" | "customer";
   status: "active" | "inactive" | "suspended";
   lastLoginAt?: string | null;
 };
@@ -30,14 +30,12 @@ const roleLabel: Record<string, string> = {
   admin: "Admin",
   organizer: "Event Manager",
   customer: "Customer",
-  staff: "Staff",
 };
 
 const roleColors: Record<string, string> = {
   admin: "bg-primary/10 text-primary",
   organizer: "bg-secondary/10 text-secondary",
   customer: "bg-surface-high text-foreground",
-  staff: "bg-muted text-muted-foreground",
 };
 
 const emptyUser = { name: "", email: "", phone: "", role: "customer", password: "" };
