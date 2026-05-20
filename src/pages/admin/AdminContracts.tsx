@@ -42,7 +42,7 @@ const AdminContracts = () => {
       const data = await apiClient.get<Contract[]>("/admin/contracts", { pageSize: 100 });
       setContracts(data);
     } catch (error) {
-      toast.error("Khong tai duoc danh sach hop dong");
+      toast.error("Không tải được danh sách hợp đồng");
     } finally {
       setLoading(false);
     }
@@ -55,33 +55,33 @@ const AdminContracts = () => {
   const handleDelete = async (id: string) => {
     try {
       await apiClient.del(`/admin/contracts/${id}`);
-      toast.success("Da xoa hop dong");
+      toast.success("Đã xóa hợp đồng");
       await loadContracts();
     } catch (error) {
-      toast.error("Xoa hop dong that bai");
+      toast.error("Xóa hợp đồng thất bại");
     }
   };
 
   const handleSend = async (contract: Contract) => {
     try {
       await apiClient.patch(`/admin/contracts/${contract.id}/send`);
-      toast.success(`Da gui hop dong ${contract.contractCode}`);
+      toast.success(`Đã gửi hợp đồng ${contract.contractCode}`);
       await loadContracts();
     } catch (error) {
-      toast.error("Gui hop dong that bai");
+      toast.error("Gửi hợp đồng thất bại");
     }
   };
 
   const handleDownload = (contract: Contract) => {
-    toast.success(`Dang tai hop dong ${contract.contractCode}...`);
+    toast.success(`Đang tải hợp đồng ${contract.contractCode}...`);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-headline-lg text-foreground">Quan ly hop dong</h1>
-          <p className="font-body text-sm text-muted-foreground">{loading ? "Dang tai..." : `${contracts.length} hop dong`}</p>
+          <h1 className="font-serif text-headline-lg text-foreground">Quản lý hợp đồng</h1>
+          <p className="font-body text-sm text-muted-foreground">{loading ? "Đang tải..." : `${contracts.length} hợp đồng`}</p>
         </div>
       </div>
 
@@ -89,13 +89,13 @@ const AdminContracts = () => {
         <Table>
           <TableHeader>
             <TableRow className="bg-surface-low">
-              <TableHead>So HD</TableHead>
-              <TableHead>Su kien</TableHead>
-              <TableHead>Khach hang</TableHead>
-              <TableHead>Gia tri</TableHead>
-              <TableHead>Ngay gui</TableHead>
-              <TableHead>Phien ban</TableHead>
-              <TableHead>Trang thai</TableHead>
+              <TableHead>Số HĐ</TableHead>
+              <TableHead>Sự kiện</TableHead>
+              <TableHead>Khách hàng</TableHead>
+              <TableHead>Giá trị</TableHead>
+              <TableHead>Ngày gửi</TableHead>
+              <TableHead>Phiên bản</TableHead>
+              <TableHead>Trạng thái</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
