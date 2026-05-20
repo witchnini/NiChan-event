@@ -41,6 +41,14 @@ type Project = {
     phone?: string | null;
     avatarUrl?: string | null;
   };
+  consultationRequest?: {
+    requestCode: string;
+    status: string;
+    customerName?: string | null;
+    eventType?: string | null;
+    note?: string | null;
+    budgetRange?: string | null;
+  } | null;
   _count: {
     tasks: number;
     milestones: number;
@@ -51,7 +59,6 @@ type Project = {
 
 type ProjectDetail = Project & {
   summary?: string | null;
-  consultationRequest?: { requestCode: string; status: string; budgetRange?: string | null } | null;
   milestones: {
     id: string;
     title: string;
@@ -125,17 +132,24 @@ type KanbanResponse = {
     guestCount?: number | null;
     progressPercent: number;
     customerUser?: { id: string; displayName: string; avatarUrl?: string | null };
+    consultationRequest?: {
+      requestCode: string;
+      status: string;
+      customerName?: string | null;
+      eventType?: string | null;
+      note?: string | null;
+    } | null;
   };
   columns: KanbanColumn[];
 };
 
 const statuses = [
-  { value: "all", label: "Tat ca" },
-  { value: "planning", label: "Lap ke hoach" },
-  { value: "quoted", label: "Da bao gia" },
-  { value: "contracted", label: "Da xac nhan" },
-  { value: "in_progress", label: "Dang trien khai" },
-  { value: "completed", label: "Hoan thanh" },
+  { value: "all", label: "Tất cả" },
+  { value: "planning", label: "Lập kế hoạch" },
+  { value: "quoted", label: "Đã báo giá" },
+  { value: "contracted", label: "Đã xác nhận" },
+  { value: "in_progress", label: "Đang triển khai" },
+  { value: "completed", label: "Hoàn thành" },
 ];
 
 const statusLabel = Object.fromEntries(statuses.map((status) => [status.value, status.label]));
@@ -154,6 +168,19 @@ const priorityColors: Record<string, string> = {
   low: "bg-muted text-muted-foreground",
 };
 
+const priorityLabel: Record<KanbanTask["priority"], string> = {
+  high: "Cao",
+  medium: "Trung bình",
+  low: "Thấp",
+};
+
+const taskStatusLabel: Record<string, string> = {
+  todo: "Chờ xử lý",
+  in_progress: "Đang thực hiện",
+  review: "Đang kiểm tra",
+  done: "Hoàn thành",
+};
+
 const allowedTaskMoves: Record<string, string[]> = {
   todo: ["in_progress"],
   in_progress: ["review", "todo"],
@@ -170,7 +197,7 @@ const emptyForm = {
 };
 
 const formatDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleDateString("vi-VN") : "Chua cap nhat";
+  value ? new Date(value).toLocaleDateString("vi-VN") : "Chưa cập nhật";
 
 const formatDateTime = (value?: string | null) =>
   value
@@ -180,13 +207,52 @@ const formatDateTime = (value?: string | null) =>
         day: "2-digit",
         month: "2-digit",
       })
-    : "Chua cap nhat";
+    : "Chưa cập nhật";
 
 const toApiDateTime = (value: string) =>
   value ? new Date(`${value}T00:00:00`).toISOString() : undefined;
 
 const isOverdue = (value?: string | null) =>
   !!value && new Date(value).getTime() < Date.now();
+
+const parseEventNameFromNote = (note?: string | null): string | null => {
+  if (!note) return null;
+
+  const eventNameLine = note
+    .split(/\r?\n/)
+    .find((line) => line.trim().toLowerCase().startsWith("ten su kien:"));
+
+  if (!eventNameLine) return null;
+
+  const eventName = eventNameLine.split(":").slice(1).join(":").trim();
+  return eventName || null;
+};
+
+const normalizeName = (value?: string | null) => value?.trim().toLowerCase() ?? "";
+
+const getRequestProjectName = (project: Pick<Project, "name" | "type" | "consultationRequest">) =>
+  parseEventNameFromNote(project.consultationRequest?.note) ||
+  project.consultationRequest?.eventType ||
+  project.type;
+
+const isGeneratedProjectName = (project: Pick<Project, "name" | "type" | "customerUser" | "consultationRequest">) => {
+  const savedName = normalizeName(project.name);
+  const customerNames = [
+    project.consultationRequest?.customerName,
+    project.customerUser.displayName,
+  ]
+    .map(normalizeName)
+    .filter(Boolean);
+
+  return customerNames.some(
+    (customerName) => savedName === normalizeName(`${project.type} - ${customerName}`),
+  );
+};
+
+const getProjectDisplayName = (project: Pick<Project, "name" | "type" | "customerUser" | "consultationRequest">) => {
+  const requestName = getRequestProjectName(project);
+  return isGeneratedProjectName(project) ? requestName : project.name;
+};
 
 const OrganizerProjects = () => {
   const { user } = useAuth();
@@ -211,11 +277,18 @@ const OrganizerProjects = () => {
 
   const assigneeOptions = useMemo(() => {
     const self = user
-      ? [{ id: user.userId, displayName: `${user.displayName} (toi)`, email: user.email }]
+      ? [{ id: user.userId, displayName: `${user.displayName} (tôi)`, email: user.email }]
       : [];
     const merged = [...self, ...staff];
     return merged.filter((item, index) => merged.findIndex((other) => other.id === item.id) === index);
   }, [staff, user]);
+
+  const selectedProject = useMemo(
+    () => projects.find((project) => project.id === selectedProjectId) ?? null,
+    [projects, selectedProjectId],
+  );
+  const activeProject = projectDetail ?? selectedProject;
+  const activeProjectDisplayName = activeProject ? getProjectDisplayName(activeProject) : kanban?.project.name ?? "";
 
   const availableStaffForProject = useMemo(() => {
     const assignedIds = new Set(projectStaff.map((assignment) => assignment.staffUser.id));
@@ -228,7 +301,10 @@ const OrganizerProjects = () => {
       const matchesStatus = filterStatus === "all" || project.status === filterStatus;
       const matchesSearch =
         !keyword ||
+        getProjectDisplayName(project).toLowerCase().includes(keyword) ||
         project.name.toLowerCase().includes(keyword) ||
+        project.consultationRequest?.eventType?.toLowerCase().includes(keyword) ||
+        project.consultationRequest?.note?.toLowerCase().includes(keyword) ||
         project.type.toLowerCase().includes(keyword) ||
         project.customerUser.displayName.toLowerCase().includes(keyword);
       return matchesStatus && matchesSearch;
@@ -250,10 +326,10 @@ const OrganizerProjects = () => {
       ? Math.round(projects.reduce((sum, project) => sum + project.progressPercent, 0) / projects.length)
       : 0;
     return [
-      { label: "Du an dang xu ly", value: String(active), icon: ListChecks, color: "text-primary" },
-      { label: "Dang trien khai", value: String(running), icon: PlayCircle, color: "text-secondary" },
-      { label: "Da hoan thanh", value: String(completed), icon: CheckCircle, color: "text-secondary" },
-      { label: "Tien do TB", value: `${avgProgress}%`, icon: Activity, color: "text-primary" },
+      { label: "Dự án đang xử lý", value: String(active), icon: ListChecks, color: "text-primary" },
+      { label: "Đang triển khai", value: String(running), icon: PlayCircle, color: "text-secondary" },
+      { label: "Đã hoàn thành", value: String(completed), icon: CheckCircle, color: "text-secondary" },
+      { label: "Tiến độ TB", value: `${avgProgress}%`, icon: Activity, color: "text-primary" },
     ];
   }, [projects]);
 
@@ -276,7 +352,7 @@ const OrganizerProjects = () => {
       setKanban(kanbanData);
       setProjectStaff(staffData.assignments);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Khong tai duoc du an");
+      toast.error(err instanceof Error ? err.message : "Không tải được dự án");
     } finally {
       setContextLoading(false);
     }
@@ -308,7 +384,7 @@ const OrganizerProjects = () => {
         setSelectedProjectId(firstId);
         if (firstId) await loadProjectContext(firstId);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Khong tai duoc du an");
+        if (!cancelled) setError(err instanceof Error ? err.message : "Không tải được dự án");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -364,7 +440,7 @@ const OrganizerProjects = () => {
     try {
       if (editingTask) {
         await apiClient.put(`/organizer/tasks/${editingTask.id}`, payload);
-        toast.success("Da cap nhat task");
+        toast.success("Đã cập nhật công việc");
       } else {
         await apiClient.post("/organizer/tasks", {
           ...payload,
@@ -372,33 +448,33 @@ const OrganizerProjects = () => {
           status: targetStatus,
           sortOrder: 0,
         });
-        toast.success("Da them task moi");
+        toast.success("Đã thêm công việc mới");
       }
 
       setDialogOpen(false);
       await refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Khong the luu task");
+      toast.error(err instanceof Error ? err.message : "Không thể lưu công việc");
     }
   };
 
   const moveTask = async (task: KanbanTask, toStatus: string) => {
     try {
       await apiClient.patch(`/organizer/tasks/${task.id}/status`, { status: toStatus });
-      toast.success("Da chuyen task");
+      toast.success("Đã chuyển công việc");
       await refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Khong the chuyen task");
+      toast.error(err instanceof Error ? err.message : "Không thể chuyển công việc");
     }
   };
 
   const deleteTask = async (taskId: string) => {
     try {
       await apiClient.del(`/organizer/tasks/${taskId}`);
-      toast.success("Da xoa task");
+      toast.success("Đã xóa công việc");
       await refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Khong the xoa task");
+      toast.error(err instanceof Error ? err.message : "Không thể xóa công việc");
     }
   };
 
@@ -406,10 +482,10 @@ const OrganizerProjects = () => {
     if (!selectedProjectId) return;
     try {
       await apiClient.patch(`/organizer/projects/${selectedProjectId}/status`, { status });
-      toast.success(status === "in_progress" ? "Da bat dau trien khai" : "Da danh dau hoan thanh");
+      toast.success(status === "in_progress" ? "Đã bắt đầu triển khai" : "Đã đánh dấu hoàn thành");
       await refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Khong the cap nhat trang thai du an");
+      toast.error(err instanceof Error ? err.message : "Không thể cập nhật trạng thái dự án");
     }
   };
 
@@ -420,7 +496,7 @@ const OrganizerProjects = () => {
 
   const assignProjectStaff = async () => {
     if (!selectedProjectId || !staffForm.staffUserId || !staffForm.roleText.trim()) {
-      toast.error("Vui long chon nhan su va nhap vai tro trong du an");
+      toast.error("Vui lòng chọn nhân sự và nhập vai trò trong dự án");
       return;
     }
 
@@ -429,21 +505,21 @@ const OrganizerProjects = () => {
         staffUserId: staffForm.staffUserId,
         roleText: staffForm.roleText.trim(),
       });
-      toast.success("Da them nhan su vao du an");
+      toast.success("Đã thêm nhân sự vào dự án");
       setStaffDialogOpen(false);
       await refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Khong the them nhan su");
+      toast.error(err instanceof Error ? err.message : "Không thể thêm nhân sự");
     }
   };
 
   const removeProjectStaff = async (assignmentId: string) => {
     try {
       await apiClient.del(`/organizer/staff/assignments/${assignmentId}`);
-      toast.success("Da go nhan su khoi du an");
+      toast.success("Đã gỡ nhân sự khỏi dự án");
       await refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Khong the go nhan su");
+      toast.error(err instanceof Error ? err.message : "Không thể gỡ nhân sự");
     }
   };
 
@@ -455,36 +531,36 @@ const OrganizerProjects = () => {
       <div className="flex gap-2 flex-wrap">
         {["planning", "quoted", "contracted"].includes(status) && (
           <Button variant="hero" size="sm" onClick={() => changeProjectStatus("in_progress")}>
-            <PlayCircle size={14} /> Bat dau trien khai
+            <PlayCircle size={14} /> Bắt đầu triển khai
           </Button>
         )}
         {status === "in_progress" && (
           <Button variant="outline" size="sm" onClick={() => changeProjectStatus("completed")}>
-            <CheckCircle size={14} /> Hoan thanh
+            <CheckCircle size={14} /> Hoàn thành
           </Button>
         )}
       </div>
     );
   };
 
-  if (loading) return <div className="font-body text-muted-foreground">Dang tai du an...</div>;
+  if (loading) return <div className="font-body text-muted-foreground">Đang tải dự án...</div>;
   if (error) return <div className="font-body text-destructive">{error}</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-headline-lg text-foreground">Quan ly du an</h1>
+          <h1 className="font-serif text-headline-lg text-foreground">Quản lý dự án</h1>
           <p className="font-body text-sm text-muted-foreground">
-            {projects.length} du an duoc phan cong
+            {projects.length} dự án được phân công
           </p>
         </div>
         <div className="flex p-1 rounded-xl bg-surface-low self-start lg:self-auto">
           {[
-            { value: "overview", label: "Tong quan" },
+            { value: "overview", label: "Tổng quan" },
             { value: "kanban", label: "Kanban" },
             { value: "timeline", label: "Timeline" },
-            { value: "staff", label: "Nhan su" },
+            { value: "staff", label: "Nhân sự" },
           ].map((item) => (
             <button
               key={item.value}
@@ -519,7 +595,7 @@ const OrganizerProjects = () => {
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Tim du an, khach hang..."
+                placeholder="Tìm dự án, khách hàng..."
                 className="pl-9 rounded-xl bg-surface-low font-body border-none"
               />
             </div>
@@ -541,36 +617,45 @@ const OrganizerProjects = () => {
           </div>
 
           <div className="space-y-3">
-            {filteredProjects.map((project) => (
-              <button
-                key={project.id}
-                onClick={() => setSelectedProjectId(project.id)}
-                className={`w-full text-left bg-surface-lowest rounded-xl p-4 shadow-ambient transition-all ${
-                  selectedProjectId === project.id ? "ring-2 ring-primary" : "hover:bg-surface-low"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-body text-sm font-semibold text-foreground truncate">{project.name}</p>
-                    <p className="font-body text-xs text-muted-foreground truncate">
-                      {project.customerUser.displayName} - {formatDate(project.eventDate)}
+            {filteredProjects.map((project) => {
+              const projectName = getProjectDisplayName(project);
+
+              return (
+                <button
+                  key={project.id}
+                  onClick={() => setSelectedProjectId(project.id)}
+                  className={`w-full text-left bg-surface-lowest rounded-xl p-4 shadow-ambient transition-all ${
+                    selectedProjectId === project.id ? "ring-2 ring-primary" : "hover:bg-surface-low"
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <p
+                      className="font-body text-sm font-semibold text-foreground leading-snug line-clamp-2 break-words"
+                      title={projectName}
+                    >
+                      {projectName}
                     </p>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="min-w-0 font-body text-xs text-muted-foreground truncate">
+                        {project.customerUser.displayName} - {formatDate(project.eventDate)}
+                      </p>
+                      <span className={`shrink-0 whitespace-nowrap px-2 py-1 rounded-full text-[11px] font-body font-semibold ${statusColors[project.status] ?? "bg-muted text-muted-foreground"}`}>
+                        {statusLabel[project.status] ?? project.status}
+                      </span>
+                    </div>
                   </div>
-                  <span className={`shrink-0 px-2 py-1 rounded-full text-[11px] font-body font-semibold ${statusColors[project.status] ?? "bg-muted text-muted-foreground"}`}>
-                    {statusLabel[project.status] ?? project.status}
-                  </span>
-                </div>
-                <div className="mt-3 flex items-center justify-between text-xs font-body text-muted-foreground">
-                  <span>{project._count.tasks} task</span>
-                  <span>{project.progressPercent}%</span>
-                </div>
-                <Progress value={project.progressPercent} className="h-2 mt-2 bg-surface-high" />
-              </button>
-            ))}
+                  <div className="mt-3 flex items-center justify-between text-xs font-body text-muted-foreground">
+                    <span>{project._count.tasks} công việc</span>
+                    <span>{project.progressPercent}%</span>
+                  </div>
+                  <Progress value={project.progressPercent} className="h-2 mt-2 bg-surface-high" />
+                </button>
+              );
+            })}
 
             {filteredProjects.length === 0 && (
               <div className="bg-surface-lowest rounded-xl p-6 shadow-ambient text-sm font-body text-muted-foreground">
-                Khong co du an phu hop.
+                Không có dự án phù hợp.
               </div>
             )}
           </div>
@@ -581,10 +666,10 @@ const OrganizerProjects = () => {
             <div className="bg-surface-lowest rounded-xl p-5 shadow-ambient">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div className="min-w-0">
-                  <h2 className="font-serif text-headline-md text-foreground truncate">{kanban.project.name}</h2>
+                  <h2 className="font-serif text-headline-md text-foreground break-words">{activeProjectDisplayName}</h2>
                   <div className="flex flex-wrap gap-3 mt-2 font-body text-sm text-muted-foreground">
                     <span className="inline-flex items-center gap-1"><Calendar size={14} /> {formatDate(kanban.project.eventDate)}</span>
-                    <span className="inline-flex items-center gap-1"><Users size={14} /> {kanban.project.guestCount ?? 0} khach</span>
+                    <span className="inline-flex items-center gap-1"><Users size={14} /> {kanban.project.guestCount ?? 0} khách</span>
                     <span className="inline-flex items-center gap-1"><UserRound size={14} /> {kanban.project.customerUser?.displayName ?? "-"}</span>
                   </div>
                   <div className="flex items-center gap-3 mt-4">
@@ -603,32 +688,32 @@ const OrganizerProjects = () => {
           )}
 
           {contextLoading && (
-            <div className="font-body text-sm text-muted-foreground">Dang cap nhat du lieu...</div>
+            <div className="font-body text-sm text-muted-foreground">Đang cập nhật dữ liệu...</div>
           )}
 
           {view === "overview" && projectDetail && (
             <div className="grid grid-cols-1 2xl:grid-cols-[1fr,360px] gap-5">
               <div className="bg-surface-lowest rounded-xl p-5 shadow-ambient">
-                <h3 className="font-serif text-headline-md text-foreground mb-4">Thong tin du an</h3>
+                <h3 className="font-serif text-headline-md text-foreground mb-4">Thông tin dự án</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-body text-sm">
-                  <Info label="Khach hang" value={projectDetail.customerUser.displayName} />
-                  <Info label="Lien he" value={projectDetail.customerUser.phone || projectDetail.customerUser.email || "-"} />
-                  <Info label="Loai su kien" value={projectDetail.type} />
-                  <Info label="Dia diem" value={projectDetail.locationText || "-"} />
-                  <Info label="Ma yeu cau" value={projectDetail.consultationRequest?.requestCode || "-"} />
-                  <Info label="Ngan sach du kien" value={projectDetail.consultationRequest?.budgetRange || "-"} />
+                  <Info label="Khách hàng" value={projectDetail.customerUser.displayName} />
+                  <Info label="Liên hệ" value={projectDetail.customerUser.phone || projectDetail.customerUser.email || "-"} />
+                  <Info label="Loại sự kiện" value={projectDetail.type} />
+                  <Info label="Địa điểm" value={projectDetail.locationText || "-"} />
+                  <Info label="Mã yêu cầu" value={projectDetail.consultationRequest?.requestCode || "-"} />
+                  <Info label="Ngân sách dự kiến" value={projectDetail.consultationRequest?.budgetRange || "-"} />
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
-                  <Metric label="Task" value={projectDetail._count.tasks} />
-                  <Metric label="Milestone" value={projectDetail.milestones.length} />
-                  <Metric label="Nhan su" value={projectDetail._count.staffAssignments ?? 0} />
+                  <Metric label="Công việc" value={projectDetail._count.tasks} />
+                  <Metric label="Mốc" value={projectDetail.milestones.length} />
+                  <Metric label="Nhân sự" value={projectDetail._count.staffAssignments ?? 0} />
                   <Metric label="NCC" value={projectDetail._count.vendors ?? 0} />
                 </div>
               </div>
 
               <div className="bg-surface-lowest rounded-xl p-5 shadow-ambient">
-                <h3 className="font-serif text-headline-md text-foreground mb-4">Hoat dong gan day</h3>
+                <h3 className="font-serif text-headline-md text-foreground mb-4">Hoạt động gần đây</h3>
                 <div className="space-y-3">
                   {projectDetail.activities.map((activity) => (
                     <div key={activity.id} className="border-b border-border last:border-0 pb-3 last:pb-0">
@@ -637,20 +722,20 @@ const OrganizerProjects = () => {
                     </div>
                   ))}
                   {projectDetail.activities.length === 0 && (
-                    <p className="font-body text-sm text-muted-foreground">Chua co hoat dong.</p>
+                    <p className="font-body text-sm text-muted-foreground">Chưa có hoạt động.</p>
                   )}
                 </div>
               </div>
 
               <div className="2xl:col-span-2 bg-surface-lowest rounded-xl p-5 shadow-ambient">
-                <h3 className="font-serif text-headline-md text-foreground mb-4">Milestone</h3>
+                <h3 className="font-serif text-headline-md text-foreground mb-4">Mốc triển khai</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                   {projectDetail.milestones.map((milestone) => (
                     <div key={milestone.id} className="rounded-lg border border-border p-4">
                       <div className="flex items-center justify-between gap-2">
                         <Milestone size={16} className="text-primary" />
                         <span className={`text-[11px] font-body font-semibold px-2 py-0.5 rounded-full ${statusColors[milestone.status] ?? "bg-muted text-muted-foreground"}`}>
-                          {milestone.status}
+                          {taskStatusLabel[milestone.status] ?? milestone.status}
                         </span>
                       </div>
                       <p className="font-body text-sm font-semibold text-foreground mt-3">{milestone.title}</p>
@@ -658,7 +743,7 @@ const OrganizerProjects = () => {
                     </div>
                   ))}
                   {projectDetail.milestones.length === 0 && (
-                    <p className="font-body text-sm text-muted-foreground">Chua co milestone.</p>
+                    <p className="font-body text-sm text-muted-foreground">Chưa có mốc triển khai.</p>
                   )}
                 </div>
               </div>
@@ -676,7 +761,7 @@ const OrganizerProjects = () => {
                         {column.tasks.length}
                       </span>
                     </div>
-                    <button onClick={() => openAdd(column.id)} className="text-muted-foreground hover:text-foreground" title="Them task">
+                    <button onClick={() => openAdd(column.id)} className="text-muted-foreground hover:text-foreground" title="Thêm công việc">
                       <Plus size={16} />
                     </button>
                   </div>
@@ -697,10 +782,10 @@ const OrganizerProjects = () => {
                               <p className="font-body text-sm font-semibold text-foreground break-words">{task.title}</p>
                               <div className="flex flex-wrap gap-2 mt-2 text-xs font-body">
                                 <span className={`px-2 py-0.5 rounded-full font-semibold ${priorityColors[task.priority]}`}>
-                                  {task.priority}
+                                  {priorityLabel[task.priority]}
                                 </span>
                                 <span className={isOverdue(task.dueAt) && task.status !== "done" ? "text-destructive" : "text-muted-foreground"}>
-                                  <Calendar size={11} className="inline mr-1" /> {task.dueAt ? formatDate(task.dueAt) : "Chua co han"}
+                                  <Calendar size={11} className="inline mr-1" /> {task.dueAt ? formatDate(task.dueAt) : "Chưa có hạn"}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1 mt-2">
@@ -708,15 +793,15 @@ const OrganizerProjects = () => {
                                   <Users size={10} className="text-secondary" />
                                 </div>
                                 <span className="font-body text-xs text-muted-foreground">
-                                  {task.assignee?.displayName || "Chua phan cong"}
+                                  {task.assignee?.displayName || "Chưa phân công"}
                                 </span>
                               </div>
                             </div>
                             <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => openEdit(task)} className="text-muted-foreground hover:text-foreground" title="Sua">
+                              <button onClick={() => openEdit(task)} className="text-muted-foreground hover:text-foreground" title="Sửa">
                                 <Edit2 size={13} />
                               </button>
-                              <button onClick={() => deleteTask(task.id)} className="text-muted-foreground hover:text-destructive" title="Xoa">
+                              <button onClick={() => deleteTask(task.id)} className="text-muted-foreground hover:text-destructive" title="Xóa">
                                 <Trash2 size={13} />
                               </button>
                             </div>
@@ -750,13 +835,13 @@ const OrganizerProjects = () => {
             <div className="bg-surface-lowest rounded-xl p-5 shadow-ambient">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
                 <div>
-                  <h3 className="font-serif text-headline-md text-foreground">Nhan su du an</h3>
+                  <h3 className="font-serif text-headline-md text-foreground">Nhân sự dự án</h3>
                   <p className="font-body text-sm text-muted-foreground">
-                    {projectStaff.length} nhan su dang duoc gan vao du an nay
+                    {projectStaff.length} nhân sự đang được gắn vào dự án này
                   </p>
                 </div>
                 <Button variant="hero" size="sm" onClick={openAssignStaff} disabled={availableStaffForProject.length === 0}>
-                  <UserPlus size={14} /> Them nhan su
+                  <UserPlus size={14} /> Thêm nhân sự
                 </Button>
               </div>
 
@@ -775,15 +860,15 @@ const OrganizerProjects = () => {
                       <button
                         onClick={() => removeProjectStaff(assignment.id)}
                         className="text-muted-foreground hover:text-destructive"
-                        title="Go nhan su"
+                        title="Gỡ nhân sự"
                       >
                         <Trash2 size={14} />
                       </button>
                     </div>
                     <div className="mt-3 space-y-1 font-body text-xs text-muted-foreground">
-                      <p>Vai tro: <span className="text-foreground font-semibold">{assignment.roleText}</span></p>
-                      <p>Trang thai: {assignment.status}</p>
-                      <p>Lien he: {assignment.staffUser.phone || assignment.staffUser.email || "-"}</p>
+                      <p>Vai trò: <span className="text-foreground font-semibold">{assignment.roleText}</span></p>
+                      <p>Trạng thái: {assignment.status}</p>
+                      <p>Liên hệ: {assignment.staffUser.phone || assignment.staffUser.email || "-"}</p>
                     </div>
                   </div>
                 ))}
@@ -791,7 +876,7 @@ const OrganizerProjects = () => {
 
               {projectStaff.length === 0 && (
                 <div className="rounded-xl bg-surface-low p-6 font-body text-sm text-muted-foreground">
-                  Chua co nhan su nao trong du an nay. Organizer co the them nhan su phu hop cho tung vai tro trien khai.
+                  Chưa có nhân sự nào trong dự án này. Organizer có thể thêm nhân sự phù hợp cho từng vai trò triển khai.
                 </div>
               )}
             </div>
@@ -800,10 +885,10 @@ const OrganizerProjects = () => {
           {view === "timeline" && (
             <div className="bg-surface-lowest rounded-xl p-5 shadow-ambient">
               <div className="flex items-center justify-between gap-3 mb-5">
-                <h3 className="font-serif text-headline-md text-foreground">Timeline cong viec</h3>
+                <h3 className="font-serif text-headline-md text-foreground">Timeline công việc</h3>
                 {overdueTasks > 0 && (
                   <span className="font-body text-xs font-semibold text-destructive bg-destructive/10 rounded-full px-3 py-1">
-                    {overdueTasks} task tre han
+                    {overdueTasks} công việc trễ hạn
                   </span>
                 )}
               </div>
@@ -818,21 +903,21 @@ const OrganizerProjects = () => {
                   .map((task) => (
                     <div key={task.id} className="grid grid-cols-1 md:grid-cols-[150px,1fr,140px] gap-3 border-b border-border last:border-0 pb-3 last:pb-0">
                       <div className="font-body text-sm text-muted-foreground flex items-center gap-2">
-                        <Clock size={14} /> {task.dueAt ? formatDate(task.dueAt) : "Chua co han"}
+                        <Clock size={14} /> {task.dueAt ? formatDate(task.dueAt) : "Chưa có hạn"}
                       </div>
                       <div>
                         <p className="font-body text-sm font-semibold text-foreground">{task.title}</p>
                         <p className="font-body text-xs text-muted-foreground mt-1">
-                          {task.assignee?.displayName || "Chua phan cong"} - {task.priority}
+                          {task.assignee?.displayName || "Chưa phân công"} - {priorityLabel[task.priority]}
                         </p>
                       </div>
                       <span className={`self-start justify-self-start md:justify-self-end px-2 py-1 rounded-full text-xs font-body font-semibold ${statusColors[task.status] ?? "bg-muted text-muted-foreground"}`}>
-                        {task.status}
+                        {taskStatusLabel[task.status] ?? task.status}
                       </span>
                     </div>
                   ))}
                 {allTasks.length === 0 && (
-                  <p className="font-body text-sm text-muted-foreground">Chua co task trong du an nay.</p>
+                  <p className="font-body text-sm text-muted-foreground">Chưa có công việc trong dự án này.</p>
                 )}
               </div>
             </div>
@@ -843,24 +928,24 @@ const OrganizerProjects = () => {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-serif">{editingTask ? "Sua task" : "Them task moi"}</DialogTitle>
+            <DialogTitle className="font-serif">{editingTask ? "Sửa công việc" : "Thêm công việc mới"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="font-body text-sm text-foreground mb-1 block">Ten task</label>
+              <label className="font-body text-sm text-foreground mb-1 block">Tên công việc</label>
               <Input
                 value={form.title}
                 onChange={(event) => setForm({ ...form, title: event.target.value })}
-                placeholder="Nhap ten task..."
+                placeholder="Nhập tên công việc..."
                 className="rounded-xl border-none bg-surface-low"
               />
             </div>
             <div>
-              <label className="font-body text-sm text-foreground mb-1 block">Mo ta</label>
+              <label className="font-body text-sm text-foreground mb-1 block">Mô tả</label>
               <Input
                 value={form.description}
                 onChange={(event) => setForm({ ...form, description: event.target.value })}
-                placeholder="Mo ta ngan..."
+                placeholder="Mô tả ngắn..."
                 className="rounded-xl border-none bg-surface-low"
               />
             </div>
@@ -875,25 +960,25 @@ const OrganizerProjects = () => {
                 />
               </div>
               <div>
-                <label className="font-body text-sm text-foreground mb-1 block">Uu tien</label>
+                <label className="font-body text-sm text-foreground mb-1 block">Ưu tiên</label>
                 <select
                   value={form.priority}
                   onChange={(event) => setForm({ ...form, priority: event.target.value as "low" | "medium" | "high" })}
                   className="w-full rounded-xl bg-surface-low p-2.5 font-body text-sm text-foreground border-none"
                 >
                   <option value="high">Cao</option>
-                  <option value="medium">Trung binh</option>
-                  <option value="low">Thap</option>
+                  <option value="medium">Trung bình</option>
+                  <option value="low">Thấp</option>
                 </select>
               </div>
               <div>
-                <label className="font-body text-sm text-foreground mb-1 block">Phu trach</label>
+                <label className="font-body text-sm text-foreground mb-1 block">Phụ trách</label>
                 <select
                   value={form.assigneeUserId}
                   onChange={(event) => setForm({ ...form, assigneeUserId: event.target.value })}
                   className="w-full rounded-xl bg-surface-low p-2.5 font-body text-sm text-foreground border-none"
                 >
-                  <option value="">Chua phan cong</option>
+                  <option value="">Chưa phân công</option>
                   {assigneeOptions.map((person) => (
                     <option key={person.id} value={person.id}>{person.displayName}</option>
                   ))}
@@ -902,8 +987,8 @@ const OrganizerProjects = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Huy</Button>
-            <Button variant="hero" onClick={saveTask}>{editingTask ? "Cap nhat" : "Them"}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Hủy</Button>
+            <Button variant="hero" onClick={saveTask}>{editingTask ? "Cập nhật" : "Thêm"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -911,37 +996,37 @@ const OrganizerProjects = () => {
       <Dialog open={staffDialogOpen} onOpenChange={setStaffDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-serif">Them nhan su du an</DialogTitle>
+            <DialogTitle className="font-serif">Thêm nhân sự dự án</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="font-body text-sm text-foreground mb-1 block">Nhan su</label>
+              <label className="font-body text-sm text-foreground mb-1 block">Nhân sự</label>
               <select
                 value={staffForm.staffUserId}
                 onChange={(event) => setStaffForm((current) => ({ ...current, staffUserId: event.target.value }))}
                 className="w-full rounded-xl bg-surface-low p-2.5 font-body text-sm text-foreground border-none"
               >
-                <option value="">Chon nhan su</option>
+                <option value="">Chọn nhân sự</option>
                 {availableStaffForProject.map((person) => (
                   <option key={person.id} value={person.id}>
-                    {person.displayName} - {person.staffProfile?.jobTitle || person.email || "Nhan su"}
+                    {person.displayName} - {person.staffProfile?.jobTitle || person.email || "Nhân sự"}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="font-body text-sm text-foreground mb-1 block">Vai tro trong du an</label>
+              <label className="font-body text-sm text-foreground mb-1 block">Vai trò trong dự án</label>
               <Input
                 value={staffForm.roleText}
                 onChange={(event) => setStaffForm((current) => ({ ...current, roleText: event.target.value }))}
-                placeholder="VD: Dieu phoi sanh, le tan, am thanh..."
+                placeholder="VD: Điều phối sảnh, lễ tân, âm thanh..."
                 className="rounded-xl border-none bg-surface-low"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setStaffDialogOpen(false)}>Huy</Button>
-            <Button variant="hero" onClick={assignProjectStaff}>Them</Button>
+            <Button variant="outline" onClick={() => setStaffDialogOpen(false)}>Hủy</Button>
+            <Button variant="hero" onClick={assignProjectStaff}>Thêm</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -27,7 +27,13 @@ type Project = {
   progressPercent: number;
   customerUser: { id: string; displayName: string; email?: string | null };
   organizerUser?: { id: string; displayName: string; email?: string | null } | null;
-  consultationRequest?: { requestCode: string; status: string } | null;
+  consultationRequest?: {
+    requestCode: string;
+    status: string;
+    customerName?: string | null;
+    eventType?: string | null;
+    note?: string | null;
+  } | null;
   _count: { tasks: number; milestones: number; vendors?: number; staffAssignments?: number };
 };
 
@@ -123,6 +129,45 @@ const formatDate = (value?: string | null) =>
 const toApiDateTime = (value: string) =>
   value ? new Date(`${value}T00:00:00`).toISOString() : undefined;
 
+const parseEventNameFromNote = (note?: string | null): string | null => {
+  if (!note) return null;
+
+  const eventNameLine = note
+    .split(/\r?\n/)
+    .find((line) => line.trim().toLowerCase().startsWith("ten su kien:"));
+
+  if (!eventNameLine) return null;
+
+  const eventName = eventNameLine.split(":").slice(1).join(":").trim();
+  return eventName || null;
+};
+
+const normalizeName = (value?: string | null) => value?.trim().toLowerCase() ?? "";
+
+const getRequestProjectName = (project: Project) =>
+  parseEventNameFromNote(project.consultationRequest?.note) ||
+  project.consultationRequest?.eventType ||
+  project.type;
+
+const isGeneratedProjectName = (project: Project) => {
+  const savedName = normalizeName(project.name);
+  const customerNames = [
+    project.consultationRequest?.customerName,
+    project.customerUser.displayName,
+  ]
+    .map(normalizeName)
+    .filter(Boolean);
+
+  return customerNames.some(
+    (customerName) => savedName === normalizeName(`${project.type} - ${customerName}`),
+  );
+};
+
+const getProjectDisplayName = (project: Project) => {
+  const requestName = getRequestProjectName(project);
+  return isGeneratedProjectName(project) ? requestName : project.name;
+};
+
 const AdminProjects = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [managers, setManagers] = useState<Manager[]>([]);
@@ -132,15 +177,19 @@ const AdminProjects = () => {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [nameDialogOpen, setNameDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<KanbanTask | null>(null);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [targetStatus, setTargetStatus] = useState("todo");
   const [form, setForm] = useState(emptyForm);
+  const [projectNameForm, setProjectNameForm] = useState("");
   const [loading, setLoading] = useState(true);
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) ?? null,
     [projects, selectedProjectId],
   );
+  const selectedProjectDisplayName = selectedProject ? getProjectDisplayName(selectedProject) : "";
 
   const loadProjectContext = async (projectId: string) => {
     const [kanbanData, detailData] = await Promise.all([
@@ -213,6 +262,32 @@ const AdminProjects = () => {
       await refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Cập nhật người tổ chức thất bại");
+    }
+  };
+
+  const openProjectNameEdit = (project: Project) => {
+    setEditingProject(project);
+    setProjectNameForm(getProjectDisplayName(project));
+    setNameDialogOpen(true);
+  };
+
+  const saveProjectName = async () => {
+    if (!editingProject) return;
+
+    const nextName = projectNameForm.trim();
+    if (!nextName) {
+      toast.error("Vui lòng nhập tên dự án");
+      return;
+    }
+
+    try {
+      await apiClient.patch(`/admin/projects/${editingProject.id}/name`, { name: nextName });
+      toast.success("Đã cập nhật tên dự án");
+      setNameDialogOpen(false);
+      setEditingProject(null);
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Không thể cập nhật tên dự án");
     }
   };
 
@@ -328,35 +403,64 @@ const AdminProjects = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-[360px,1fr] gap-5">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-          {projects.map((project) => (
-            <button
-              key={project.id}
-              onClick={() => setSelectedProjectId(project.id)}
-              className={`w-full text-left bg-surface-lowest rounded-xl p-4 shadow-ambient transition-all ${
-                selectedProjectId === project.id ? "ring-2 ring-primary" : "hover:bg-surface-low"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-body text-sm font-semibold text-foreground truncate">{project.name}</p>
-                  <p className="font-body text-xs text-muted-foreground truncate">
-                    {project.customerUser.displayName} - {formatDate(project.eventDate)}
-                  </p>
+          {projects.map((project) => {
+            const projectName = getProjectDisplayName(project);
+
+            return (
+              <div
+                key={project.id}
+                className={`w-full text-left bg-surface-lowest rounded-xl p-4 shadow-ambient transition-all ${
+                  selectedProjectId === project.id ? "ring-2 ring-primary" : "hover:bg-surface-low"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProjectId(project.id)}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <p
+                      className="font-body text-sm font-semibold text-foreground leading-snug line-clamp-2 break-words"
+                      title={projectName}
+                    >
+                      {projectName}
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openProjectNameEdit(project)}
+                    className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-surface-low hover:text-foreground"
+                    title="Sửa tên dự án"
+                    aria-label={`Sửa tên dự án ${projectName}`}
+                  >
+                    <Edit2 size={14} />
+                  </button>
                 </div>
-                <span className={`shrink-0 px-2 py-1 rounded-full text-[11px] font-body font-semibold ${statusColors[project.status] ?? "bg-muted text-muted-foreground"}`}>
-                  {statusLabel[project.status] ?? project.status}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedProjectId(project.id)}
+                  className="mt-2 w-full text-left"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="min-w-0 font-body text-xs text-muted-foreground truncate">
+                      {project.customerUser.displayName} - {formatDate(project.eventDate)}
+                    </p>
+                    <span className={`shrink-0 whitespace-nowrap px-2 py-1 rounded-full text-[11px] font-body font-semibold ${statusColors[project.status] ?? "bg-muted text-muted-foreground"}`}>
+                      {statusLabel[project.status] ?? project.status}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-xs font-body text-muted-foreground">
+                    <span>{project._count.tasks} công việc</span>
+                    <span>{project._count.staffAssignments ?? 0} nhân sự</span>
+                    <span>{project.progressPercent}%</span>
+                  </div>
+                  <div className="mt-2 h-2 rounded-full bg-surface-high overflow-hidden">
+                    <div className="h-full gradient-primary" style={{ width: `${project.progressPercent}%` }} />
+                  </div>
+                </button>
               </div>
-              <div className="mt-3 flex items-center justify-between text-xs font-body text-muted-foreground">
-                <span>{project._count.tasks} công việc</span>
-                <span>{project._count.staffAssignments ?? 0} nhân sự</span>
-                <span>{project.progressPercent}%</span>
-              </div>
-              <div className="mt-2 h-2 rounded-full bg-surface-high overflow-hidden">
-                <div className="h-full gradient-primary" style={{ width: `${project.progressPercent}%` }} />
-              </div>
-            </button>
-          ))}
+            );
+          })}
 
           {!loading && projects.length === 0 && (
             <div className="bg-surface-lowest rounded-xl p-6 shadow-ambient text-sm font-body text-muted-foreground">
@@ -369,8 +473,19 @@ const AdminProjects = () => {
           {selectedProject && kanban?.project && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-surface-lowest rounded-xl p-5 shadow-ambient">
               <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-                <div>
-                  <h2 className="font-serif text-headline-md text-foreground">{selectedProject.name}</h2>
+                <div className="min-w-0">
+                  <div className="flex items-start gap-2">
+                    <h2 className="font-serif text-headline-md text-foreground break-words">{selectedProjectDisplayName}</h2>
+                    <button
+                      type="button"
+                      onClick={() => openProjectNameEdit(selectedProject)}
+                      className="mt-1 shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-surface-low hover:text-foreground"
+                      title="Sửa tên dự án"
+                      aria-label={`Sửa tên dự án ${selectedProjectDisplayName}`}
+                    >
+                      <Edit2 size={15} />
+                    </button>
+                  </div>
                   <div className="flex flex-wrap gap-3 mt-2 font-body text-sm text-muted-foreground">
                     <span className="inline-flex items-center gap-1"><Calendar size={14} /> {formatDate(selectedProject.eventDate)}</span>
                     <span className="inline-flex items-center gap-1"><Users size={14} /> {selectedProject.guestCount ?? 0} khách</span>
@@ -528,6 +643,27 @@ const AdminProjects = () => {
           )}
         </div>
       </div>
+
+      <Dialog open={nameDialogOpen} onOpenChange={setNameDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Sửa tên dự án</DialogTitle>
+          </DialogHeader>
+          <div>
+            <label className="font-body text-sm text-foreground mb-1 block">Tên dự án</label>
+            <Input
+              value={projectNameForm}
+              onChange={(event) => setProjectNameForm(event.target.value)}
+              className="rounded-xl border-none bg-surface-low"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNameDialogOpen(false)}>Hủy</Button>
+            <Button variant="hero" onClick={saveProjectName}>Cập nhật</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
