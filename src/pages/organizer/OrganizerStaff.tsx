@@ -59,7 +59,8 @@ type Shift = {
   event?: { name: string } | null;
 };
 
-const emptyForm = { staffUserId: "", roleText: "", status: "invited" as const };
+type StaffFormState = { staffUserId: string; roleText: string; status: "invited" | "confirmed" | "declined" };
+const emptyForm: StaffFormState = { staffUserId: "", roleText: "", status: "invited" };
 
 const assignmentStatusLabels: Record<ProjectStaffAssignment["status"], string> = {
   invited: "Đã mời",
