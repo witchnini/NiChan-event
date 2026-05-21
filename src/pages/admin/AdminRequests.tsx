@@ -135,7 +135,7 @@ const AdminRequests = () => {
       toast.success("Đã cập nhật trạng thái");
       await loadRequests();
     } catch (error) {
-      toast.error("Cập nhật trạng thái thất bại");
+      toast.error(error instanceof Error ? error.message : "Cập nhật trạng thái thất bại");
     }
   };
 

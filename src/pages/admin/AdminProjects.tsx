@@ -168,6 +168,9 @@ const getProjectDisplayName = (project: Project) => {
   return isGeneratedProjectName(project) ? requestName : project.name;
 };
 
+const getProjectCustomerName = (project: Project) =>
+  project.consultationRequest?.customerName || project.customerUser.displayName;
+
 const AdminProjects = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [managers, setManagers] = useState<Manager[]>([]);
@@ -443,7 +446,7 @@ const AdminProjects = () => {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="min-w-0 font-body text-xs text-muted-foreground truncate">
-                      {project.customerUser.displayName} - {formatDate(project.eventDate)}
+                      {getProjectCustomerName(project)} - {formatDate(project.eventDate)}
                     </p>
                     <span className={`shrink-0 whitespace-nowrap px-2 py-1 rounded-full text-[11px] font-body font-semibold ${statusColors[project.status] ?? "bg-muted text-muted-foreground"}`}>
                       {statusLabel[project.status] ?? project.status}

@@ -5,7 +5,6 @@ import {
   Calendar,
   CheckCircle,
   ChevronRight,
-  Clock,
   Edit2,
   ListChecks,
   Milestone,
@@ -114,6 +113,9 @@ type KanbanTask = {
   status: string;
   priority: "low" | "medium" | "high";
   dueAt?: string | null;
+  createdAt?: string | null;
+  completedAt?: string | null;
+  sortOrder?: number | null;
   assignee?: { id: string; displayName: string; avatarUrl?: string | null } | null;
 };
 
@@ -180,6 +182,37 @@ const taskStatusLabel: Record<string, string> = {
   review: "Đang kiểm tra",
   done: "Hoàn thành",
 };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_MS = 7 * DAY_MS;
+const MIN_GANTT_WEEKS = 10;
+
+const priorityDurationDays: Record<KanbanTask["priority"], number> = {
+  high: 7,
+  medium: 14,
+  low: 21,
+};
+
+const ganttStatusColors: Record<string, string> = {
+  todo: "bg-primary-container/70",
+  in_progress: "bg-primary",
+  review: "bg-secondary/70",
+  done: "bg-secondary",
+};
+
+const getTime = (value?: string | null) => {
+  const time = value ? new Date(value).getTime() : Number.NaN;
+  return Number.isFinite(time) ? time : null;
+};
+
+const startOfDay = (time: number) => {
+  const date = new Date(time);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+};
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
 
 const allowedTaskMoves: Record<string, string[]> = {
   todo: ["in_progress"],
@@ -254,6 +287,9 @@ const getProjectDisplayName = (project: Pick<Project, "name" | "type" | "custome
   return isGeneratedProjectName(project) ? requestName : project.name;
 };
 
+const getProjectCustomerName = (project: Pick<Project, "customerUser" | "consultationRequest">) =>
+  project.consultationRequest?.customerName || project.customerUser.displayName;
+
 const OrganizerProjects = () => {
   const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -289,6 +325,9 @@ const OrganizerProjects = () => {
   );
   const activeProject = projectDetail ?? selectedProject;
   const activeProjectDisplayName = activeProject ? getProjectDisplayName(activeProject) : kanban?.project.name ?? "";
+  const activeProjectCustomerName = activeProject
+    ? getProjectCustomerName(activeProject)
+    : kanban?.project.customerUser?.displayName ?? "-";
 
   const availableStaffForProject = useMemo(() => {
     const assignedIds = new Set(projectStaff.map((assignment) => assignment.staffUser.id));
@@ -306,7 +345,7 @@ const OrganizerProjects = () => {
         project.consultationRequest?.eventType?.toLowerCase().includes(keyword) ||
         project.consultationRequest?.note?.toLowerCase().includes(keyword) ||
         project.type.toLowerCase().includes(keyword) ||
-        project.customerUser.displayName.toLowerCase().includes(keyword);
+        getProjectCustomerName(project).toLowerCase().includes(keyword);
       return matchesStatus && matchesSearch;
     });
   }, [filterStatus, projects, search]);
@@ -317,6 +356,73 @@ const OrganizerProjects = () => {
     () => allTasks.filter((task) => task.status !== "done" && isOverdue(task.dueAt)).length,
     [allTasks],
   );
+  const ganttData = useMemo(() => {
+    const sortedTasks = [...allTasks].sort((a, b) => {
+      const left = getTime(a.dueAt) ?? getTime(a.createdAt) ?? Number.MAX_SAFE_INTEGER;
+      const right = getTime(b.dueAt) ?? getTime(b.createdAt) ?? Number.MAX_SAFE_INTEGER;
+      return left - right || (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.title.localeCompare(b.title);
+    });
+    const eventTime = getTime(kanban?.project.eventDate);
+    const fallbackStartTime = eventTime
+      ? startOfDay(eventTime - (MIN_GANTT_WEEKS - 1) * WEEK_MS)
+      : startOfDay(Date.now());
+
+    const rawItems = sortedTasks.map((task, index) => {
+      const dueTime = getTime(task.dueAt);
+      const createdTime = getTime(task.createdAt);
+      const completedTime = getTime(task.completedAt);
+      const estimatedDays = priorityDurationDays[task.priority] ?? priorityDurationDays.medium;
+      const startTime = startOfDay(
+        dueTime !== null
+          ? dueTime - estimatedDays * DAY_MS
+          : createdTime ?? fallbackStartTime + index * 3 * DAY_MS,
+      );
+      const endSource = dueTime ?? completedTime ?? startTime + estimatedDays * DAY_MS;
+      const endTime = startOfDay(Math.max(endSource, startTime + DAY_MS));
+
+      return {
+        task,
+        startTime,
+        endTime,
+      };
+    });
+
+    if (rawItems.length === 0) {
+      return {
+        items: [],
+        weekLabels: Array.from({ length: MIN_GANTT_WEEKS }, (_, index) => `Tuần ${index + 1}`),
+        gridTemplateColumns: `repeat(${MIN_GANTT_WEEKS}, minmax(86px, 1fr))`,
+        minWidth: 1060,
+      };
+    }
+
+    const chartStartTime = startOfDay(Math.min(...rawItems.map((item) => item.startTime)));
+    const chartEndSource = Math.max(...rawItems.map((item) => item.endTime), eventTime ?? 0);
+    const weekCount = Math.max(
+      MIN_GANTT_WEEKS,
+      Math.ceil((chartEndSource - chartStartTime + DAY_MS) / WEEK_MS),
+    );
+    const chartEndTime = chartStartTime + weekCount * WEEK_MS;
+    const chartSpan = Math.max(chartEndTime - chartStartTime, WEEK_MS);
+    const items = rawItems.map((item) => {
+      const left = clamp(((item.startTime - chartStartTime) / chartSpan) * 100, 0, 100);
+      const right = clamp(((item.endTime - chartStartTime) / chartSpan) * 100, 0, 100);
+      const width = Math.min(100, Math.max(2.5, right - left));
+
+      return {
+        ...item,
+        left: Math.min(left, 100 - width),
+        width,
+      };
+    });
+
+    return {
+      items,
+      weekLabels: Array.from({ length: weekCount }, (_, index) => `Tuần ${index + 1}`),
+      gridTemplateColumns: `repeat(${weekCount}, minmax(86px, 1fr))`,
+      minWidth: 200 + weekCount * 86,
+    };
+  }, [allTasks, kanban?.project.eventDate]);
 
   const stats = useMemo(() => {
     const active = projects.filter((project) => project.status !== "completed").length;
@@ -637,7 +743,7 @@ const OrganizerProjects = () => {
                     </p>
                     <div className="flex items-center justify-between gap-3">
                       <p className="min-w-0 font-body text-xs text-muted-foreground truncate">
-                        {project.customerUser.displayName} - {formatDate(project.eventDate)}
+                        {getProjectCustomerName(project)} - {formatDate(project.eventDate)}
                       </p>
                       <span className={`shrink-0 whitespace-nowrap px-2 py-1 rounded-full text-[11px] font-body font-semibold ${statusColors[project.status] ?? "bg-muted text-muted-foreground"}`}>
                         {statusLabel[project.status] ?? project.status}
@@ -670,7 +776,7 @@ const OrganizerProjects = () => {
                   <div className="flex flex-wrap gap-3 mt-2 font-body text-sm text-muted-foreground">
                     <span className="inline-flex items-center gap-1"><Calendar size={14} /> {formatDate(kanban.project.eventDate)}</span>
                     <span className="inline-flex items-center gap-1"><Users size={14} /> {kanban.project.guestCount ?? 0} khách</span>
-                    <span className="inline-flex items-center gap-1"><UserRound size={14} /> {kanban.project.customerUser?.displayName ?? "-"}</span>
+                    <span className="inline-flex items-center gap-1"><UserRound size={14} /> {activeProjectCustomerName}</span>
                   </div>
                   <div className="flex items-center gap-3 mt-4">
                     <Progress value={kanban.project.progressPercent} className="h-2 max-w-sm bg-surface-high" />
@@ -883,9 +989,9 @@ const OrganizerProjects = () => {
           )}
 
           {view === "timeline" && (
-            <div className="bg-surface-lowest rounded-xl p-5 shadow-ambient">
-              <div className="flex items-center justify-between gap-3 mb-5">
-                <h3 className="font-serif text-headline-md text-foreground">Timeline công việc</h3>
+            <div className="bg-surface-lowest rounded-xl p-5 shadow-ambient overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                <h3 className="font-serif text-headline-md text-foreground">Gantt Chart - Timeline dự án</h3>
                 {overdueTasks > 0 && (
                   <span className="font-body text-xs font-semibold text-destructive bg-destructive/10 rounded-full px-3 py-1">
                     {overdueTasks} công việc trễ hạn
@@ -893,32 +999,75 @@ const OrganizerProjects = () => {
                 )}
               </div>
 
-              <div className="space-y-3">
-                {[...allTasks]
-                  .sort((a, b) => {
-                    const left = a.dueAt ? new Date(a.dueAt).getTime() : Number.MAX_SAFE_INTEGER;
-                    const right = b.dueAt ? new Date(b.dueAt).getTime() : Number.MAX_SAFE_INTEGER;
-                    return left - right;
-                  })
-                  .map((task) => (
-                    <div key={task.id} className="grid grid-cols-1 md:grid-cols-[150px,1fr,140px] gap-3 border-b border-border last:border-0 pb-3 last:pb-0">
-                      <div className="font-body text-sm text-muted-foreground flex items-center gap-2">
-                        <Clock size={14} /> {task.dueAt ? formatDate(task.dueAt) : "Chưa có hạn"}
+              {ganttData.items.length > 0 ? (
+                <div className="overflow-x-auto pb-1">
+                  <div className="font-body" style={{ minWidth: `${ganttData.minWidth}px` }}>
+                    <div className="grid grid-cols-[200px,1fr] border-b border-border pb-3">
+                      <div className="text-xs font-semibold text-muted-foreground">Task</div>
+                      <div
+                        className="grid text-center text-xs text-muted-foreground"
+                        style={{ gridTemplateColumns: ganttData.gridTemplateColumns }}
+                      >
+                        {ganttData.weekLabels.map((label) => (
+                          <div key={label}>{label}</div>
+                        ))}
                       </div>
-                      <div>
-                        <p className="font-body text-sm font-semibold text-foreground">{task.title}</p>
-                        <p className="font-body text-xs text-muted-foreground mt-1">
-                          {task.assignee?.displayName || "Chưa phân công"} - {priorityLabel[task.priority]}
-                        </p>
-                      </div>
-                      <span className={`self-start justify-self-start md:justify-self-end px-2 py-1 rounded-full text-xs font-body font-semibold ${statusColors[task.status] ?? "bg-muted text-muted-foreground"}`}>
-                        {taskStatusLabel[task.status] ?? task.status}
-                      </span>
                     </div>
-                  ))}
-                {allTasks.length === 0 && (
-                  <p className="font-body text-sm text-muted-foreground">Chưa có công việc trong dự án này.</p>
-                )}
+
+                    <div className="divide-y divide-border/70">
+                      {ganttData.items.map((item) => {
+                        const task = item.task;
+                        const isLate = task.status !== "done" && isOverdue(task.dueAt);
+                        const barColor = isLate
+                          ? "bg-destructive/80"
+                          : ganttStatusColors[task.status] ?? "bg-muted-foreground/60";
+
+                        return (
+                          <div key={task.id} className="grid grid-cols-[200px,1fr] items-center py-3">
+                            <div className="min-w-0 pr-4">
+                              <p className="truncate text-sm font-semibold text-foreground" title={task.title}>
+                                {task.title}
+                              </p>
+                              <p className="mt-0.5 truncate text-xs text-muted-foreground" title={activeProjectDisplayName}>
+                                {activeProjectDisplayName}
+                              </p>
+                            </div>
+
+                            <div className="relative h-8">
+                              <div
+                                className="absolute inset-0 grid"
+                                style={{ gridTemplateColumns: ganttData.gridTemplateColumns }}
+                              >
+                                {ganttData.weekLabels.map((label) => (
+                                  <span key={label} className="border-l border-border/60 first:border-l-0" />
+                                ))}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => openEdit(task)}
+                                className={`absolute top-1/2 h-4 -translate-y-1/2 rounded-full ${barColor} shadow-sm transition-all hover:h-5 hover:shadow-ambient`}
+                                style={{ left: `${item.left}%`, width: `${item.width}%` }}
+                                title={`${task.title} - ${task.assignee?.displayName || "Chưa phân công"} - ${task.dueAt ? formatDate(task.dueAt) : "Chưa có hạn"}`}
+                                aria-label={`Sửa công việc ${task.title}`}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="font-body text-sm text-muted-foreground">Chưa có công việc trong dự án này.</p>
+              )}
+
+              <div className="mt-4 flex flex-wrap gap-3 font-body text-xs text-muted-foreground">
+                {Object.entries(taskStatusLabel).map(([status, label]) => (
+                  <span key={status} className="inline-flex items-center gap-2">
+                    <span className={`h-2.5 w-6 rounded-full ${ganttStatusColors[status] ?? "bg-muted-foreground/60"}`} />
+                    {label}
+                  </span>
+                ))}
               </div>
             </div>
           )}
