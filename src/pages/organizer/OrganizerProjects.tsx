@@ -221,12 +221,19 @@ const allowedTaskMoves: Record<string, string[]> = {
   done: [],
 };
 
-const emptyForm = {
+type TaskFormState = {
+  title: string;
+  description: string;
+  assigneeUserId: string;
+  dueAt: string;
+  priority: "low" | "medium" | "high";
+};
+const emptyForm: TaskFormState = {
   title: "",
   description: "",
   assigneeUserId: "",
   dueAt: "",
-  priority: "medium" as const,
+  priority: "medium",
 };
 
 const formatDate = (value?: string | null) =>
