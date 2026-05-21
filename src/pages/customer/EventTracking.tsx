@@ -154,7 +154,7 @@ const EventTracking = () => {
               </div>
               <div className="p-6 space-y-4 max-h-96 overflow-y-auto">
                 {messages.map(msg => {
-                  const isMine = msg.senderUserId === user?.id;
+                  const isMine = msg.senderUserId === user?.userId;
                   return (
                     <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
                       <div className={`max-w-[80%] rounded-xl p-4 ${isMine ? "gradient-primary text-primary-foreground" : "bg-surface-low"}`}>
