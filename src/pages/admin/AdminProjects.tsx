@@ -121,7 +121,8 @@ const allowedTaskMoves: Record<string, string[]> = {
   done: [],
 };
 
-const emptyForm = { title: "", description: "", dueAt: "", priority: "medium" as const };
+type TaskFormState = { title: string; description: string; dueAt: string; priority: "low" | "medium" | "high" };
+const emptyForm: TaskFormState = { title: "", description: "", dueAt: "", priority: "medium" };
 
 const formatDate = (value?: string | null) =>
   value ? new Date(value).toLocaleDateString("vi-VN") : "Chưa cập nhật";
