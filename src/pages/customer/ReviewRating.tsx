@@ -5,8 +5,17 @@ import { Button } from "@/components/ui/button";
 import { apiClient } from "@/services/apiClient";
 import { toast } from "sonner";
 import SectionHeading from "@/components/SectionHeading";
+import { getEventDisplayName } from "@/lib/eventDisplay";
 
-type CustomerEvent = { id: string; name: string; eventDate?: string | null; status: string };
+type CustomerEvent = {
+  id: string;
+  name: string;
+  type?: string | null;
+  eventDate?: string | null;
+  status: string;
+  customerUser?: { displayName: string } | null;
+  consultationRequest?: { customerName?: string | null; eventType?: string | null; note?: string | null } | null;
+};
 type Review = { id: string; eventId: string; event?: { id: string; name: string }; ratingOverall: number; comment: string };
 type Criterion = { key: string; label: string };
 
@@ -30,7 +39,7 @@ const ReviewRating = () => {
       setReviews(reviewList);
       setCriteria(criterionList);
     } catch (error) {
-      toast.error("Khong tai duoc du lieu danh gia");
+      toast.error("Không tải được dữ liệu đánh giá");
     }
   };
 
@@ -50,7 +59,7 @@ const ReviewRating = () => {
   const submitReview = async () => {
     if (!activeEventId) return;
     if (criteria.length > 0 && Object.keys(ratings).length < criteria.length) {
-      toast.error("Vui long danh gia tat ca tieu chi");
+      toast.error("Vui lòng đánh giá tất cả tiêu chí");
       return;
     }
     const scores = Object.values(ratings);
@@ -63,10 +72,10 @@ const ReviewRating = () => {
         criteriaScores: criteria.map(c => ({ key: c.key, score: ratings[c.key] ?? avgRating })),
       });
       setActiveEventId(null);
-      toast.success("Da gui danh gia thanh cong");
+      toast.success("Đã gửi đánh giá thành công");
       await load();
     } catch (error) {
-      toast.error("Gui danh gia that bai");
+      toast.error("Gửi đánh giá thất bại");
     }
   };
 
@@ -74,21 +83,21 @@ const ReviewRating = () => {
     <div className="min-h-screen pt-24 pb-16">
       <section className="py-12 bg-surface-low">
         <div className="container mx-auto px-6">
-          <SectionHeading label="Danh gia" title="Danh gia & Review" subtitle="Chia se trai nghiem cua ban sau cac su kien da hoan thanh." />
+          <SectionHeading label="Đánh giá" title="Đánh giá & nhận xét" subtitle="Chia sẻ trải nghiệm của bạn sau các sự kiện đã hoàn thành." />
         </div>
       </section>
 
       <section className="py-12">
         <div className="container mx-auto px-6 max-w-3xl space-y-6">
-          {reviewableEvents.length === 0 && <p className="font-body text-muted-foreground">Chua co su kien hoan thanh de danh gia.</p>}
+          {reviewableEvents.length === 0 && <p className="font-body text-muted-foreground">Chưa có sự kiện hoàn thành để đánh giá.</p>}
           {reviewableEvents.map((event, i) => {
             const review = reviewByEvent.get(event.id);
             return (
               <motion.div key={event.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="bg-surface-lowest rounded-xl p-6 shadow-ambient">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                   <div>
-                    <h3 className="font-serif text-headline-md text-foreground">{event.name}</h3>
-                    <p className="font-body text-sm text-muted-foreground mt-1">Ngay su kien: {event.eventDate ? new Date(event.eventDate).toLocaleDateString("vi-VN") : "-"}</p>
+                    <h3 className="font-serif text-headline-md text-foreground">{getEventDisplayName(event)}</h3>
+                    <p className="font-body text-sm text-muted-foreground mt-1">Ngày sự kiện: {event.eventDate ? new Date(event.eventDate).toLocaleDateString("vi-VN") : "-"}</p>
                   </div>
                   {review ? (
                     <div className="flex items-center gap-2">
@@ -101,7 +110,7 @@ const ReviewRating = () => {
                       <CheckCircle size={16} className="text-secondary" />
                     </div>
                   ) : (
-                    <Button variant="hero" size="sm" onClick={() => startReview(event.id)}><Star size={14} /> Danh gia ngay</Button>
+                    <Button variant="hero" size="sm" onClick={() => startReview(event.id)}><Star size={14} /> Đánh giá ngay</Button>
                   )}
                 </div>
 
@@ -125,13 +134,13 @@ const ReviewRating = () => {
                     </div>
 
                     <div>
-                      <label className="font-body text-sm text-foreground mb-2 block">Nhan xet cua ban</label>
-                      <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Chia se trai nghiem cua ban..." rows={4} className="w-full rounded-xl bg-surface-low p-4 font-body text-sm text-foreground border-none resize-none focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                      <label className="font-body text-sm text-foreground mb-2 block">Nhận xét của bạn</label>
+                      <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Chia sẻ trải nghiệm của bạn..." rows={4} className="w-full rounded-xl bg-surface-low p-4 font-body text-sm text-foreground border-none resize-none focus:outline-none focus:ring-2 focus:ring-primary/20" />
                     </div>
 
                     <div className="flex gap-3">
-                      <Button variant="outline" onClick={() => setActiveEventId(null)} className="flex-1">Huy</Button>
-                      <Button variant="hero" onClick={submitReview} className="flex-1"><Send size={14} /> Gui danh gia</Button>
+                      <Button variant="outline" onClick={() => setActiveEventId(null)} className="flex-1">Hủy</Button>
+                      <Button variant="hero" onClick={submitReview} className="flex-1"><Send size={14} /> Gửi đánh giá</Button>
                     </div>
                   </motion.div>
                 )}

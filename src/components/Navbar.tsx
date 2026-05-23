@@ -15,7 +15,7 @@ const navLinks = [
 ];
 
 const customerLinks = [
-  { label: "Dashboard", path: "/dashboard" },
+  { label: "Tổng quan", path: "/dashboard" },
   { label: "Sự kiện", path: "/dashboard/su-kien" },
   { label: "Hợp đồng", path: "/dashboard/hop-dong" },
   { label: "Đánh giá", path: "/dashboard/danh-gia" },
@@ -149,7 +149,7 @@ const Navbar = () => {
                           onClick={() => setProfileOpen(false)}
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body text-sm text-foreground hover:bg-surface-low transition-all w-full"
                         >
-                          <LayoutDashboard size={14} /> {currentRole === "customer" ? "Dashboard" : "Quay lại Panel"}
+                          <LayoutDashboard size={14} /> {currentRole === "customer" ? "Tổng quan" : "Quay lại Panel"}
                         </Link>
                       )}
                       <div className="my-1 border-t border-border" />
@@ -230,7 +230,7 @@ const Navbar = () => {
                   {panelPath && (
                     <Link to={panelPath} onClick={() => setIsOpen(false)}>
                       <Button variant="tertiary" size="lg" className="w-full gap-2">
-                        <Settings size={16} /> {currentRole === "customer" ? "Dashboard" : "Quay lại Panel"}
+                        <Settings size={16} /> {currentRole === "customer" ? "Tổng quan" : "Quay lại Panel"}
                       </Button>
                     </Link>
                   )}

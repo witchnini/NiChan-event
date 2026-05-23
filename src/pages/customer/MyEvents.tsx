@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Calendar, MapPin, Users, ArrowRight } from "lucide-react";
+import { Calendar, MapPin, Users, ArrowRight, UserRound } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import SectionHeading from "@/components/SectionHeading";
 import { apiClient } from "@/services/apiClient";
 import { toast } from "sonner";
+import { getEventDisplayName, getEventStatusLabel } from "@/lib/eventDisplay";
 
 type CustomerEvent = {
   id: string;
@@ -17,18 +18,21 @@ type CustomerEvent = {
   status: string;
   progressPercent?: number | null;
   budgetEstimated?: string | number | null;
+  organizerUser?: { displayName: string } | null;
+  customerUser?: { displayName: string } | null;
+  consultationRequest?: { customerName?: string | null; eventType?: string | null; note?: string | null } | null;
 };
 
 const statusFilters = [
-  { label: "Tat ca", value: "all" },
-  { label: "Dang chuan bi", value: "planning" },
-  { label: "Da xac nhan", value: "contracted" },
-  { label: "Dang trien khai", value: "in_progress" },
-  { label: "Da bao gia", value: "quoted" },
-  { label: "Hoan thanh", value: "completed" },
+  { label: "Tất cả", value: "all" },
+  { label: "Đang chuẩn bị", value: "planning" },
+  { label: "Đã xác nhận", value: "contracted" },
+  { label: "Đang triển khai", value: "in_progress" },
+  { label: "Đã báo giá", value: "quoted" },
+  { label: "Hoàn thành", value: "completed" },
 ];
 
-const money = (value?: string | number | null) => Number(value || 0).toLocaleString("vi-VN") + "d";
+const money = (value?: string | number | null) => Number(value || 0).toLocaleString("vi-VN") + "đ";
 
 const MyEvents = () => {
   const [events, setEvents] = useState<CustomerEvent[]>([]);
@@ -41,7 +45,7 @@ const MyEvents = () => {
       try {
         setEvents(await apiClient.get<CustomerEvent[]>("/customer/events", { status: activeFilter === "all" ? undefined : activeFilter }));
       } catch (error) {
-        toast.error("Khong tai duoc danh sach su kien");
+        toast.error("Không tải được danh sách sự kiện");
       } finally {
         setLoading(false);
       }
@@ -53,7 +57,7 @@ const MyEvents = () => {
     <div className="min-h-screen pt-24 pb-16">
       <section className="py-12 bg-surface-low">
         <div className="container mx-auto px-6">
-          <SectionHeading label="Su kien cua toi" title="Danh sach su kien" subtitle="Theo doi va quan ly tat ca su kien cua ban." />
+          <SectionHeading label="Sự kiện của tôi" title="Danh sách sự kiện" subtitle="Theo dõi và quản lý tất cả sự kiện của bạn." />
         </div>
       </section>
 
@@ -69,10 +73,10 @@ const MyEvents = () => {
           </div>
 
           <div className="space-y-6">
-            {loading && <p className="font-body text-muted-foreground">Dang tai su kien...</p>}
+            {loading && <p className="font-body text-muted-foreground">Đang tải sự kiện...</p>}
             {!loading && events.length === 0 && (
               <div className="text-center py-16">
-                <p className="font-body text-muted-foreground">Khong co su kien nao trong danh muc nay.</p>
+                <p className="font-body text-muted-foreground">Không có sự kiện nào trong danh mục này.</p>
               </div>
             )}
             {events.map((event, i) => (
@@ -81,22 +85,23 @@ const MyEvents = () => {
                   <div className="flex flex-col md:flex-row md:items-center gap-6">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-serif text-headline-md text-foreground">{event.name}</h3>
-                        <span className="px-3 py-1 rounded-full text-xs font-body font-semibold bg-primary/10 text-primary">{event.status}</span>
+                        <h3 className="font-serif text-headline-md text-foreground">{getEventDisplayName(event)}</h3>
+                        <span className="px-3 py-1 rounded-full text-xs font-body font-semibold bg-primary/10 text-primary">{getEventStatusLabel(event.status)}</span>
                       </div>
                       <div className="flex flex-wrap gap-4 text-sm font-body text-muted-foreground">
                         <span className="flex items-center gap-1"><Calendar size={14} /> {event.eventDate ? new Date(event.eventDate).toLocaleDateString("vi-VN") : "-"}</span>
                         <span className="flex items-center gap-1"><MapPin size={14} /> {event.locationText || "-"}</span>
-                        <span className="flex items-center gap-1"><Users size={14} /> {event.guestCount ?? 0} khach</span>
+                        <span className="flex items-center gap-1"><Users size={14} /> {event.guestCount ?? 0} khách</span>
+                        <span className="flex items-center gap-1"><UserRound size={14} /> Quản lý dự án: {event.organizerUser?.displayName ?? "Chưa phân công"}</span>
                       </div>
                     </div>
                     <div className="w-full md:w-48 space-y-2">
                       <div className="flex items-center justify-between text-sm font-body">
-                        <span className="text-muted-foreground">Tien do</span>
+                        <span className="text-muted-foreground">Tiến độ</span>
                         <span className="text-foreground font-semibold">{event.progressPercent ?? 0}%</span>
                       </div>
                       <Progress value={event.progressPercent ?? 0} className="h-2" />
-                      <p className="text-sm font-body text-muted-foreground">Budget: {money(event.budgetEstimated)}</p>
+                      <p className="text-sm font-body text-muted-foreground">Ngân sách: {money(event.budgetEstimated)}</p>
                     </div>
                     <ArrowRight size={20} className="text-muted-foreground hidden md:block" />
                   </div>

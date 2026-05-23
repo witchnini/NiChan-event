@@ -76,17 +76,17 @@ const AdminVendors = () => {
 
   const handleCreate = async () => {
     if (!form.name || !form.categoryId || !form.address) {
-      toast.error("Vui long nhap ten, danh muc va dia chi");
+      toast.error("Vui lòng nhập tên, danh mục và địa chỉ");
       return;
     }
     try {
       await apiClient.post("/admin/vendors", payload());
-      toast.success(`Da them nha cung cap ${form.name}`);
+      toast.success(`Đã thêm nhà cung cấp ${form.name}`);
       setCreateOpen(false);
       setForm({ ...emptyVendor, categoryId: categories[0]?.id || "" });
       await loadVendors();
     } catch (error) {
-      toast.error("Them nha cung cap that bai");
+      toast.error("Thêm nhà cung cấp thất bại");
     }
   };
 
@@ -94,21 +94,21 @@ const AdminVendors = () => {
     if (!editItem) return;
     try {
       await apiClient.patch(`/admin/vendors/${editItem.id}`, payload());
-      toast.success("Da cap nhat nha cung cap");
+      toast.success("Đã cập nhật nhà cung cấp");
       setEditItem(null);
       await loadVendors();
     } catch (error) {
-      toast.error("Cap nhat nha cung cap that bai");
+      toast.error("Cập nhật nhà cung cấp thất bại");
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await apiClient.del(`/admin/vendors/${id}`);
-      toast.success("Da xoa nha cung cap");
+      toast.success("Đã xóa nhà cung cấp");
       await loadVendors();
     } catch (error) {
-      toast.error("Xoa nha cung cap that bai");
+      toast.error("Xóa nhà cung cấp thất bại");
     }
   };
 
@@ -127,28 +127,28 @@ const AdminVendors = () => {
 
   const VendorForm = () => (
     <div className="space-y-4">
-      <div><label className="font-body text-sm text-foreground mb-1 block">Ten NCC *</label>
+      <div><label className="font-body text-sm text-foreground mb-1 block">Tên NCC *</label>
         <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="rounded-xl bg-surface-lowest font-body border-none" />
       </div>
-      <div><label className="font-body text-sm text-foreground mb-1 block">Danh muc *</label>
+      <div><label className="font-body text-sm text-foreground mb-1 block">Danh mục *</label>
         <Select value={form.categoryId} onValueChange={v => setForm(p => ({ ...p, categoryId: v }))}>
-          <SelectTrigger className="rounded-xl"><SelectValue placeholder="Chon danh muc" /></SelectTrigger>
+          <SelectTrigger className="rounded-xl"><SelectValue placeholder="Chọn danh mục" /></SelectTrigger>
           <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
         </Select>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div><label className="font-body text-sm text-foreground mb-1 block">Dien thoai</label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="rounded-xl bg-surface-lowest font-body border-none" /></div>
+        <div><label className="font-body text-sm text-foreground mb-1 block">Điện thoại</label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="rounded-xl bg-surface-lowest font-body border-none" /></div>
         <div><label className="font-body text-sm text-foreground mb-1 block">Email</label><Input value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="rounded-xl bg-surface-lowest font-body border-none" /></div>
       </div>
-      <div><label className="font-body text-sm text-foreground mb-1 block">Nguoi lien he</label><Input value={form.contactName} onChange={e => setForm(p => ({ ...p, contactName: e.target.value }))} className="rounded-xl bg-surface-lowest font-body border-none" /></div>
-      <div><label className="font-body text-sm text-foreground mb-1 block">Dia chi *</label><Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} className="rounded-xl bg-surface-lowest font-body border-none" /></div>
-      <div><label className="font-body text-sm text-foreground mb-1 block">Trang thai</label>
+      <div><label className="font-body text-sm text-foreground mb-1 block">Người liên hệ</label><Input value={form.contactName} onChange={e => setForm(p => ({ ...p, contactName: e.target.value }))} className="rounded-xl bg-surface-lowest font-body border-none" /></div>
+      <div><label className="font-body text-sm text-foreground mb-1 block">Địa chỉ *</label><Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} className="rounded-xl bg-surface-lowest font-body border-none" /></div>
+      <div><label className="font-body text-sm text-foreground mb-1 block">Trạng thái</label>
         <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v as Vendor["status"] }))}>
           <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="active">Dang hop tac</SelectItem>
-            <SelectItem value="paused">Tam dung</SelectItem>
-            <SelectItem value="inactive">Ngung hop tac</SelectItem>
+            <SelectItem value="active">Đang hợp tác</SelectItem>
+            <SelectItem value="paused">Tạm dừng</SelectItem>
+            <SelectItem value="blacklisted">Ngừng hợp tác</SelectItem>
           </SelectContent>
         </Select>
       </div>

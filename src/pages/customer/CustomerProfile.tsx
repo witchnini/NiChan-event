@@ -38,7 +38,7 @@ const CustomerProfile = () => {
           reviews: reviews.length,
         });
       } catch (error) {
-        toast.error("Khong tai duoc ho so khach hang");
+        toast.error("Không tải được hồ sơ khách hàng");
       }
     };
     void load();
@@ -54,23 +54,23 @@ const CustomerProfile = () => {
       });
       await refreshUser();
       setEditing(false);
-      toast.success("Da cap nhat thong tin ca nhan");
+      toast.success("Đã cập nhật thông tin cá nhân");
     } catch (error) {
-      toast.error("Cap nhat ho so that bai");
+      toast.error("Cập nhật hồ sơ thất bại");
     }
   };
 
   const handleChangePassword = async () => {
     if (!passwords.old || !passwords.new || !passwords.confirm) {
-      toast.error("Vui long dien day du thong tin");
+      toast.error("Vui lòng điền đầy đủ thông tin");
       return;
     }
     if (passwords.new.length < 6) {
-      toast.error("Mat khau moi phai it nhat 6 ky tu");
+      toast.error("Mật khẩu mới phải ít nhất 6 ký tự");
       return;
     }
     if (passwords.new !== passwords.confirm) {
-      toast.error("Mat khau xac nhan khong khop");
+      toast.error("Mật khẩu xác nhận không khớp");
       return;
     }
     try {
@@ -80,22 +80,22 @@ const CustomerProfile = () => {
       });
       setChangingPassword(false);
       setPasswords({ old: "", new: "", confirm: "" });
-      toast.success("Da doi mat khau thanh cong");
+      toast.success("Đã đổi mật khẩu thành công");
     } catch (error) {
-      toast.error("Doi mat khau that bai");
+      toast.error("Đổi mật khẩu thất bại");
     }
   };
 
   const stats = useMemo(() => [
-    { label: "Su kien", value: String(statsData.events), icon: Calendar },
-    { label: "Hop dong", value: String(statsData.contracts), icon: FileText },
-    { label: "Danh gia", value: String(statsData.reviews), icon: Star },
+    { label: "Sự kiện", value: String(statsData.events), icon: Calendar },
+    { label: "Hợp đồng", value: String(statsData.contracts), icon: FileText },
+    { label: "Đánh giá", value: String(statsData.reviews), icon: Star },
   ], [statsData]);
 
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-6 max-w-4xl space-y-6">
-        <h1 className="font-serif text-display-sm text-foreground">Ho so ca nhan</h1>
+        <h1 className="font-serif text-display-sm text-foreground">Hồ sơ cá nhân</h1>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-surface-lowest rounded-xl p-6 shadow-ambient">
           <div className="flex flex-col sm:flex-row items-start gap-6">
@@ -108,12 +108,12 @@ const CustomerProfile = () => {
               </button>
             </div>
             <div className="flex-1">
-              <h2 className="font-serif text-headline-lg text-foreground">{profile.name || "Khach hang"}</h2>
-              <p className="font-body text-sm text-primary font-semibold mt-1">Khach hang</p>
-              <p className="font-body text-sm text-muted-foreground mt-2">{profile.bio || "Thong tin lay tu PostgreSQL qua API."}</p>
+              <h2 className="font-serif text-headline-lg text-foreground">{profile.name || "Khách hàng"}</h2>
+              <p className="font-body text-sm text-primary font-semibold mt-1">Khách hàng</p>
+              <p className="font-body text-sm text-muted-foreground mt-2">{profile.bio || "Thông tin lấy từ PostgreSQL qua API."}</p>
             </div>
             <Button variant={editing ? "hero" : "outline"} size="sm" onClick={() => editing ? void handleSave() : setEditing(true)}>
-              {editing ? <><Save size={14} /> Luu</> : "Chinh sua"}
+              {editing ? <><Save size={14} /> Lưu</> : "Chỉnh sửa"}
             </Button>
           </div>
         </motion.div>
@@ -129,10 +129,10 @@ const CustomerProfile = () => {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-surface-lowest rounded-xl p-6 shadow-ambient">
-          <h3 className="font-serif text-headline-md text-foreground mb-6">Thong tin chi tiet</h3>
+          <h3 className="font-serif text-headline-md text-foreground mb-6">Thông tin chi tiết</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <label className="font-body text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5"><User size={12} /> Ho ten</label>
+              <label className="font-body text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5"><User size={12} /> Họ tên</label>
               {editing ? <Input value={profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} /> : <p className="font-body text-sm text-foreground py-2">{profile.name}</p>}
             </div>
             <div>
@@ -140,11 +140,11 @@ const CustomerProfile = () => {
               <p className="font-body text-sm text-foreground py-2">{profile.email}</p>
             </div>
             <div>
-              <label className="font-body text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5"><Phone size={12} /> So dien thoai</label>
+              <label className="font-body text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5"><Phone size={12} /> Số điện thoại</label>
               {editing ? <Input value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} /> : <p className="font-body text-sm text-foreground py-2">{profile.phone || "-"}</p>}
             </div>
             <div>
-              <label className="font-body text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5"><MapPin size={12} /> Dia chi</label>
+              <label className="font-body text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5"><MapPin size={12} /> Địa chỉ</label>
               {editing ? <Input value={profile.address} onChange={e => setProfile(p => ({ ...p, address: e.target.value }))} /> : <p className="font-body text-sm text-foreground py-2">{profile.address || "-"}</p>}
             </div>
           </div>
@@ -152,36 +152,36 @@ const CustomerProfile = () => {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-surface-lowest rounded-xl p-6 shadow-ambient">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="font-serif text-headline-md text-foreground">Bao mat</h3>
-            {!changingPassword && <Button variant="outline" size="sm" onClick={() => setChangingPassword(true)}><Lock size={14} /> Doi mat khau</Button>}
+            <h3 className="font-serif text-headline-md text-foreground">Bảo mật</h3>
+            {!changingPassword && <Button variant="outline" size="sm" onClick={() => setChangingPassword(true)}><Lock size={14} /> Đổi mật khẩu</Button>}
           </div>
           {changingPassword ? (
             <div className="space-y-4 max-w-md">
               <div>
-                <label className="font-body text-xs text-muted-foreground mb-1.5 block">Mat khau hien tai</label>
+                <label className="font-body text-xs text-muted-foreground mb-1.5 block">Mật khẩu hiện tại</label>
                 <div className="relative">
                   <Input type={showOld ? "text" : "password"} value={passwords.old} onChange={e => setPasswords(p => ({ ...p, old: e.target.value }))} />
                   <button onClick={() => setShowOld(!showOld)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">{showOld ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                 </div>
               </div>
               <div>
-                <label className="font-body text-xs text-muted-foreground mb-1.5 block">Mat khau moi</label>
+                <label className="font-body text-xs text-muted-foreground mb-1.5 block">Mật khẩu mới</label>
                 <div className="relative">
                   <Input type={showNew ? "text" : "password"} value={passwords.new} onChange={e => setPasswords(p => ({ ...p, new: e.target.value }))} />
                   <button onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">{showNew ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                 </div>
               </div>
               <div>
-                <label className="font-body text-xs text-muted-foreground mb-1.5 block">Xac nhan mat khau moi</label>
+                <label className="font-body text-xs text-muted-foreground mb-1.5 block">Xác nhận mật khẩu mới</label>
                 <Input type="password" value={passwords.confirm} onChange={e => setPasswords(p => ({ ...p, confirm: e.target.value }))} />
               </div>
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => { setChangingPassword(false); setPasswords({ old: "", new: "", confirm: "" }); }}>Huy</Button>
-                <Button variant="hero" onClick={handleChangePassword}><Lock size={14} /> Doi mat khau</Button>
+                <Button variant="outline" onClick={() => { setChangingPassword(false); setPasswords({ old: "", new: "", confirm: "" }); }}>Hủy</Button>
+                <Button variant="hero" onClick={handleChangePassword}><Lock size={14} /> Đổi mật khẩu</Button>
               </div>
             </div>
           ) : (
-            <p className="font-body text-sm text-muted-foreground">Doi mat khau qua API /customer/profile/password.</p>
+            <p className="font-body text-sm text-muted-foreground">Mật khẩu đang được quản lý bằng tài khoản thật trên hệ thống.</p>
           )}
         </motion.div>
       </div>

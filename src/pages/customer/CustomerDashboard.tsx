@@ -7,8 +7,19 @@ import { Progress } from "@/components/ui/progress";
 import { apiClient } from "@/services/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { getEventDisplayName, getEventStatusLabel } from "@/lib/eventDisplay";
 
-type DashboardEvent = { id: string; name: string; type: string; eventDate?: string | null; status: string; progressPercent?: number | null };
+type DashboardEvent = {
+  id: string;
+  name: string;
+  type: string;
+  eventDate?: string | null;
+  status: string;
+  progressPercent?: number | null;
+  organizerUser?: { displayName: string } | null;
+  customerUser?: { displayName: string } | null;
+  consultationRequest?: { customerName?: string | null; eventType?: string | null; note?: string | null } | null;
+};
 type DashboardContract = { id: string; status: string; totalValue?: string | number | null };
 type Transaction = { id: string; amount: string | number; status: string };
 type Activity = { id: string; message: string; createdAt: string; iconName?: string | null };
@@ -40,7 +51,7 @@ const CustomerDashboard = () => {
       try {
         setData(await apiClient.get<CustomerDashboardData>("/customer/dashboard"));
       } catch (error) {
-        toast.error("Khong tai duoc dashboard khach hang");
+        toast.error("Không tải được dashboard khách hàng");
       } finally {
         setLoading(false);
       }
@@ -52,10 +63,10 @@ const CustomerDashboard = () => {
     const activeEvents = data.events.filter(e => e.status !== "completed" && e.status !== "cancelled").length;
     const paid = data.transactions.filter(t => t.status === "completed").reduce((sum, t) => sum + Number(t.amount || 0), 0);
     return [
-      { label: "Su kien", value: String(data.events.length), icon: Calendar, color: "text-primary" },
-      { label: "Dang chuan bi", value: String(activeEvents), icon: Clock, color: "text-secondary" },
-      { label: "Hop dong", value: String(data.contracts.length), icon: FileText, color: "text-primary" },
-      { label: "Thanh toan", value: moneyShort(paid), icon: CreditCard, color: "text-secondary" },
+      { label: "Sự kiện", value: String(data.events.length), icon: Calendar, color: "text-primary" },
+      { label: "Đang chuẩn bị", value: String(activeEvents), icon: Clock, color: "text-secondary" },
+      { label: "Hợp đồng", value: String(data.contracts.length), icon: FileText, color: "text-primary" },
+      { label: "Thanh toán", value: moneyShort(paid), icon: CreditCard, color: "text-secondary" },
     ];
   }, [data]);
 
@@ -63,8 +74,8 @@ const CustomerDashboard = () => {
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-          <h1 className="font-serif text-display-sm text-foreground mb-2">Xin chao, <span className="text-primary">{user?.displayName ?? "khach hang"}</span></h1>
-          <p className="font-body text-muted-foreground">{loading ? "Dang tai du lieu cua ban..." : "Quan ly su kien va theo doi tien do cua ban."}</p>
+          <h1 className="font-serif text-display-sm text-foreground mb-2">Xin chào, <span className="text-primary">{user?.displayName ?? "khách hàng"}</span></h1>
+          <p className="font-body text-muted-foreground">{loading ? "Đang tải dữ liệu của bạn..." : "Quản lý sự kiện và theo dõi tiến độ của bạn."}</p>
         </motion.div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
@@ -80,8 +91,8 @@ const CustomerDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="font-serif text-headline-md text-foreground">Su kien cua toi</h2>
-              <Link to="/dashboard/su-kien"><Button variant="tertiary" size="sm">Xem tat ca</Button></Link>
+              <h2 className="font-serif text-headline-md text-foreground">Sự kiện của tôi</h2>
+              <Link to="/dashboard/su-kien"><Button variant="tertiary" size="sm">Xem tất cả</Button></Link>
             </div>
 
             {data.events.map((event, i) => (
@@ -89,14 +100,15 @@ const CustomerDashboard = () => {
                 <Link to={`/dashboard/su-kien/${event.id}`} className="block bg-surface-lowest rounded-xl p-6 shadow-ambient hover:shadow-ambient-lg transition-shadow">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h3 className="font-serif text-headline-md text-foreground">{event.name}</h3>
+                      <h3 className="font-serif text-headline-md text-foreground">{getEventDisplayName(event)}</h3>
                       <p className="font-body text-sm text-muted-foreground mt-1">{event.type} - {event.eventDate ? new Date(event.eventDate).toLocaleDateString("vi-VN") : "-"}</p>
+                      <p className="font-body text-sm text-muted-foreground mt-1">Quản lý dự án: {event.organizerUser?.displayName ?? "Chưa phân công"}</p>
                     </div>
-                    <span className="px-3 py-1 rounded-full text-xs font-body font-semibold bg-primary/10 text-primary">{event.status}</span>
+                    <span className="px-3 py-1 rounded-full text-xs font-body font-semibold bg-primary/10 text-primary">{getEventStatusLabel(event.status)}</span>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm font-body">
-                      <span className="text-muted-foreground">Tien do</span>
+                      <span className="text-muted-foreground">Tiến độ</span>
                       <span className="text-foreground font-semibold">{event.progressPercent ?? 0}%</span>
                     </div>
                     <Progress value={event.progressPercent ?? 0} className="h-2" />
@@ -104,11 +116,11 @@ const CustomerDashboard = () => {
                 </Link>
               </motion.div>
             ))}
-            {data.events.length === 0 && <p className="font-body text-sm text-muted-foreground">Chua co su kien nao.</p>}
+            {data.events.length === 0 && <p className="font-body text-sm text-muted-foreground">Chưa có sự kiện nào.</p>}
           </div>
 
           <div>
-            <h2 className="font-serif text-headline-md text-foreground mb-6">Hoat dong gan day</h2>
+            <h2 className="font-serif text-headline-md text-foreground mb-6">Hoạt động gần đây</h2>
             <div className="bg-surface-lowest rounded-xl p-6 shadow-ambient space-y-5">
               {data.recentActivities.map(activity => {
                 const Icon = activityIcon(activity.iconName);
@@ -124,12 +136,12 @@ const CustomerDashboard = () => {
                   </div>
                 );
               })}
-              {data.recentActivities.length === 0 && <p className="font-body text-sm text-muted-foreground">Chua co hoat dong moi.</p>}
+              {data.recentActivities.length === 0 && <p className="font-body text-sm text-muted-foreground">Chưa có hoạt động mới.</p>}
             </div>
 
             <div className="mt-6 space-y-3">
               <Link to="/lien-he">
-                <Button variant="hero" className="w-full">Gui yeu cau moi <ArrowRight size={16} /></Button>
+                <Button variant="hero" className="w-full">Gửi yêu cầu mới <ArrowRight size={16} /></Button>
               </Link>
             </div>
           </div>
