@@ -10,6 +10,7 @@ import {
   Edit2,
   Trash2,
   MapPin,
+  Briefcase,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ type Vendor = {
   contactName?: string | null;
   address: string;
   status: "active" | "paused" | "inactive";
+  _count?: { eventVendors?: number };
 };
 
 const emptyVendor = {
@@ -57,12 +59,13 @@ const emptyVendor = {
   email: "",
   contactName: "",
   address: "",
-  status: "active",
+  status: "active" as Vendor["status"],
 };
-const statusLabel: Record<string, string> = {
-  active: "Dang hop tac",
-  paused: "Tam dung",
-  inactive: "Ngung hop tac",
+
+const statusLabel: Record<Vendor["status"], string> = {
+  active: "Đang hợp tác",
+  paused: "Tạm dừng",
+  inactive: "Ngừng hợp tác",
 };
 
 const AdminVendors = () => {
@@ -109,23 +112,23 @@ const AdminVendors = () => {
   }, [search, filterCat]);
 
   const payload = () => ({
-    name: form.name,
+    name: form.name.trim(),
     categoryId: form.categoryId || categories[0]?.id,
-    phone: form.phone || undefined,
-    email: form.email || "",
-    contactName: form.contactName || undefined,
-    address: form.address,
+    phone: form.phone.trim() || undefined,
+    email: form.email.trim() || "",
+    contactName: form.contactName.trim() || undefined,
+    address: form.address.trim(),
     status: form.status,
   });
 
   const handleCreate = async () => {
-    if (!form.name || !form.categoryId || !form.address) {
+    if (!form.name.trim() || !form.categoryId || !form.address.trim()) {
       toast.error("Vui lòng nhập tên, danh mục và địa chỉ");
       return;
     }
     try {
       await apiClient.post("/admin/vendors", payload());
-      toast.success(`Đã thêm nhà cung cấp ${form.name}`);
+      toast.success(`Đã thêm nhà cung cấp ${form.name.trim()}`);
       setCreateOpen(false);
       setForm({ ...emptyVendor, categoryId: categories[0]?.id || "" });
       await loadVendors();
@@ -136,6 +139,10 @@ const AdminVendors = () => {
 
   const handleEdit = async () => {
     if (!editItem) return;
+    if (!form.name.trim() || !form.categoryId || !form.address.trim()) {
+      toast.error("Vui lòng nhập tên, danh mục và địa chỉ");
+      return;
+    }
     try {
       await apiClient.patch(`/admin/vendors/${editItem.id}`, payload());
       toast.success("Đã cập nhật nhà cung cấp");
@@ -173,7 +180,7 @@ const AdminVendors = () => {
     <div className="space-y-4">
       <div>
         <label className="font-body text-sm text-foreground mb-1 block">
-          Tên NCC *
+          Tên nhà cung cấp *
         </label>
         <Input
           value={form.name}
@@ -261,7 +268,7 @@ const AdminVendors = () => {
           <SelectContent>
             <SelectItem value="active">Đang hợp tác</SelectItem>
             <SelectItem value="paused">Tạm dừng</SelectItem>
-            <SelectItem value="blacklisted">Ngừng hợp tác</SelectItem>
+            <SelectItem value="inactive">Ngừng hợp tác</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -287,7 +294,7 @@ const AdminVendors = () => {
             setCreateOpen(true);
           }}
         >
-          <Plus size={16} /> Thêm NCC
+          <Plus size={16} /> Thêm nhà cung cấp
         </Button>
       </div>
 
@@ -305,7 +312,7 @@ const AdminVendors = () => {
           />
         </div>
         <div className="flex gap-2 flex-wrap">
-          {[{ id: "all", name: "Tat ca" }, ...categories].map((cat) => (
+          {[{ id: "all", name: "Tất cả" }, ...categories].map((cat) => (
             <button
               key={cat.id}
               onClick={() => setFilterCat(cat.id)}
@@ -355,6 +362,9 @@ const AdminVendors = () => {
               </p>
               <p className="flex items-center gap-2">
                 <MapPin size={11} /> {vendor.address}
+              </p>
+              <p className="flex items-center gap-2">
+                <Briefcase size={11} /> Đã tham gia {vendor._count?.eventVendors ?? 0} dự án
               </p>
             </div>
             <div className="flex gap-2 mt-4">

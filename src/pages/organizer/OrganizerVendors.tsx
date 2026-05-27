@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Edit2, Phone, MapPin, Tag } from "lucide-react";
+import { Plus, Edit2, Phone, MapPin, Tag, Briefcase, Mail, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -15,13 +15,28 @@ type Vendor = {
   categoryId: string;
   category?: VendorCategory;
   phone?: string | null;
+  email?: string | null;
   contactName?: string | null;
   address: string;
   status: "active" | "paused" | "inactive";
+  _count?: { eventVendors?: number };
 };
 
-const emptyForm = { name: "", categoryId: "", phone: "", contactName: "", address: "", status: "active" };
-const statusLabel: Record<string, string> = { active: "Dang hop tac", paused: "Tam dung", inactive: "Ngung hop tac" };
+const emptyForm = {
+  name: "",
+  categoryId: "",
+  phone: "",
+  email: "",
+  contactName: "",
+  address: "",
+  status: "active",
+};
+
+const statusLabel: Record<string, string> = {
+  active: "Đang hợp tác",
+  paused: "Tạm dừng",
+  inactive: "Ngừng hợp tác",
+};
 
 const OrganizerVendors = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -36,12 +51,12 @@ const OrganizerVendors = () => {
     setLoading(true);
     try {
       const data = await apiClient.get<Vendor[]>("/organizer/vendors", {
-        categoryId: filter === "all" ? undefined : filter,
+        category: filter === "all" ? undefined : filter,
         pageSize: 100,
       });
       setVendors(data);
     } catch (error) {
-      toast.error("Khong tai duoc nha cung cap");
+      toast.error("Không tải được nhà cung cấp");
     } finally {
       setLoading(false);
     }
@@ -53,7 +68,7 @@ const OrganizerVendors = () => {
         setCategories(data);
         setForm(prev => ({ ...prev, categoryId: prev.categoryId || data[0]?.id || "" }));
       })
-      .catch(() => toast.error("Khong tai duoc danh muc nha cung cap"));
+      .catch(() => toast.error("Không tải được danh mục nhà cung cấp"));
   }, []);
 
   useEffect(() => {
@@ -61,21 +76,28 @@ const OrganizerVendors = () => {
   }, [filter]);
 
   const payload = () => ({
-    name: form.name,
+    name: form.name.trim(),
     categoryId: form.categoryId || categories[0]?.id,
-    phone: form.phone || undefined,
-    contactName: form.contactName || undefined,
-    address: form.address,
+    phone: form.phone.trim() || undefined,
+    email: form.email.trim() || undefined,
+    contactName: form.contactName.trim() || undefined,
+    address: form.address.trim(),
     status: form.status,
   });
 
-  const openAdd = () => { setEditItem(null); setForm({ ...emptyForm, categoryId: categories[0]?.id || "" }); setDialogOpen(true); };
+  const openAdd = () => {
+    setEditItem(null);
+    setForm({ ...emptyForm, categoryId: categories[0]?.id || "" });
+    setDialogOpen(true);
+  };
+
   const openEdit = (vendor: Vendor) => {
     setEditItem(vendor);
     setForm({
       name: vendor.name,
       categoryId: vendor.categoryId,
       phone: vendor.phone ?? "",
+      email: vendor.email ?? "",
       contactName: vendor.contactName ?? "",
       address: vendor.address,
       status: vendor.status,
@@ -91,11 +113,11 @@ const OrganizerVendors = () => {
       } else {
         await apiClient.post("/organizer/vendors", payload());
       }
-      toast.success(editItem ? "Da cap nhat nha cung cap" : "Da them nha cung cap moi");
+      toast.success(editItem ? "Đã cập nhật nhà cung cấp" : "Đã thêm nhà cung cấp mới");
       setDialogOpen(false);
       await loadVendors();
     } catch (error) {
-      toast.error("Luu nha cung cap that bai");
+      toast.error("Lưu nhà cung cấp thất bại");
     }
   };
 
@@ -103,10 +125,27 @@ const OrganizerVendors = () => {
     const next = vendor.status === "active" ? "paused" : "active";
     try {
       await apiClient.patch(`/organizer/vendors/${vendor.id}/status`, { status: next });
-      toast.success("Da cap nhat trang thai");
+      toast.success("Đã cập nhật trạng thái");
       await loadVendors();
     } catch (error) {
-      toast.error("Cap nhat trang thai that bai");
+      toast.error("Cập nhật trạng thái thất bại");
+    }
+  };
+
+  const deleteVendor = async (vendor: Vendor) => {
+    const inUse = (vendor._count?.eventVendors ?? 0) > 0;
+    const message = inUse
+      ? `Nhà cung cấp "${vendor.name}" đã tham gia dự án. Hệ thống sẽ chuyển sang trạng thái ngừng hợp tác.`
+      : `Xóa nhà cung cấp "${vendor.name}"?`;
+
+    if (!window.confirm(message)) return;
+
+    try {
+      await apiClient.del(`/organizer/vendors/${vendor.id}`);
+      toast.success(inUse ? "Đã ngừng hợp tác với nhà cung cấp" : "Đã xóa nhà cung cấp");
+      await loadVendors();
+    } catch (error) {
+      toast.error("Xóa nhà cung cấp thất bại");
     }
   };
 
@@ -114,14 +153,14 @@ const OrganizerVendors = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-headline-lg text-foreground">Quan ly nha cung cap</h1>
-          <p className="font-body text-sm text-muted-foreground">{loading ? "Dang tai..." : `${vendors.length} nha cung cap`}</p>
+          <h1 className="font-serif text-headline-lg text-foreground">Quản lý nhà cung cấp</h1>
+          <p className="font-body text-sm text-muted-foreground">{loading ? "Đang tải..." : `${vendors.length} nhà cung cấp`}</p>
         </div>
-        <Button variant="hero" size="sm" onClick={openAdd}><Plus size={16} /> Them NCC</Button>
+        <Button variant="hero" size="sm" onClick={openAdd}><Plus size={16} /> Thêm nhà cung cấp</Button>
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        {[{ id: "all", name: "Tat ca" }, ...categories].map(cat => (
+        {[{ id: "all", name: "Tất cả" }, ...categories].map(cat => (
           <button key={cat.id} onClick={() => setFilter(cat.id)}
             className={`px-4 py-2 rounded-xl font-body text-sm transition-all ${filter === cat.id ? "bg-secondary text-secondary-foreground font-semibold" : "bg-surface-lowest text-muted-foreground hover:text-foreground"}`}>
             {cat.name}
@@ -143,30 +182,36 @@ const OrganizerVendors = () => {
             </div>
             <div className="space-y-2 text-xs font-body text-muted-foreground mb-4">
               <div className="flex items-center gap-2"><Phone size={12} />{vendor.phone || "-"}</div>
+              <div className="flex items-center gap-2"><Mail size={12} />{vendor.email || "-"}</div>
               <div className="flex items-center gap-2"><MapPin size={12} />{vendor.address}</div>
+              <div className="flex items-center gap-2"><Briefcase size={12} />Đã tham gia {vendor._count?.eventVendors ?? 0} dự án</div>
             </div>
-            <Button variant="ghost" size="sm" className="w-full" onClick={() => openEdit(vendor)}><Edit2 size={14} /> Chinh sua</Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="ghost" size="sm" className="w-full" onClick={() => openEdit(vendor)}><Edit2 size={14} /> Chỉnh sửa</Button>
+              <Button variant="destructive" size="sm" className="w-full" onClick={() => deleteVendor(vendor)}><Trash2 size={14} /> Xóa</Button>
+            </div>
           </motion.div>
         ))}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle className="font-serif">{editItem ? "Sua NCC" : "Them NCC moi"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-serif">{editItem ? "Sửa nhà cung cấp" : "Thêm nhà cung cấp mới"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div><label className="font-body text-sm mb-1 block">Ten NCC</label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="rounded-xl border-none bg-surface-low" /></div>
-            <div><label className="font-body text-sm mb-1 block">Danh muc</label>
+            <div><label className="font-body text-sm mb-1 block">Tên nhà cung cấp</label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="rounded-xl border-none bg-surface-low" /></div>
+            <div><label className="font-body text-sm mb-1 block">Danh mục</label>
               <Select value={form.categoryId} onValueChange={v => setForm({ ...form, categoryId: v })}>
-                <SelectTrigger className="rounded-xl"><SelectValue placeholder="Chon danh muc" /></SelectTrigger>
+                <SelectTrigger className="rounded-xl"><SelectValue placeholder="Chọn danh mục" /></SelectTrigger>
                 <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><label className="font-body text-sm mb-1 block">Lien he</label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="rounded-xl border-none bg-surface-low" /></div>
-              <div><label className="font-body text-sm mb-1 block">Dia chi</label><Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} className="rounded-xl border-none bg-surface-low" /></div>
+              <div><label className="font-body text-sm mb-1 block">Liên hệ</label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="rounded-xl border-none bg-surface-low" /></div>
+              <div><label className="font-body text-sm mb-1 block">Email</label><Input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="rounded-xl border-none bg-surface-low" /></div>
             </div>
+            <div><label className="font-body text-sm mb-1 block">Địa chỉ</label><Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} className="rounded-xl border-none bg-surface-low" /></div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setDialogOpen(false)}>Huy</Button><Button variant="hero" onClick={save}>Luu</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setDialogOpen(false)}>Hủy</Button><Button variant="hero" onClick={save}>Lưu</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -29,6 +29,16 @@ type Message = { id: string; senderUserId: string; sender?: { displayName: strin
 type DocumentItem = { id: string; name?: string; fileName?: string; fileType?: string; createdAt: string; status?: string; event?: { id: string; name: string } };
 type Transaction = { id: string; description: string; amount: string | number; transactionDate: string; paymentMethod?: string | null; status: string; event?: { id: string } };
 
+const DEFAULT_MILESTONES: Milestone[] = [
+  { id: "default-1", title: "Xác nhận yêu cầu", description: "Yêu cầu đã được tiếp nhận và xác nhận", status: "pending" },
+  { id: "default-2", title: "Báo giá & Thống nhất", description: "Báo giá đã được gửi và xác nhận bởi khách hàng", status: "pending" },
+  { id: "default-3", title: "Ký hợp đồng & Đặt cọc", description: "Hợp đồng đã ký, đặt cọc 30% đã thanh toán", status: "pending" },
+  { id: "default-4", title: "Lên kế hoạch chi tiết", description: "Đang lập kế hoạch chi tiết cho sự kiện", status: "pending" },
+  { id: "default-5", title: "Đặt venue & Nhà cung cấp", description: "Liên hệ và xác nhận venue, catering, décor", status: "pending" },
+  { id: "default-6", title: "Tổng duyệt", description: "Tổng duyệt toàn bộ chương trình", status: "pending" },
+  { id: "default-7", title: "Ngày sự kiện", description: "Ngày diễn ra sự kiện chính thức", status: "pending" },
+];
+
 const EventTracking = () => {
   const { id } = useParams();
   const { user } = useAuth();
@@ -130,25 +140,49 @@ const EventTracking = () => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-3xl">
             <div className="relative">
               <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-border" />
-              {milestones.map((milestone, i) => {
-                const milestoneDate = milestone.dueDate ?? milestone.milestoneDate;
+              {(() => {
+                // Map event status → index of the step currently "in progress"
+                // Steps before this index are "completed", this index is "in_progress", after are "pending"
+                const EVENT_STATUS_TO_STEP: Record<string, number> = {
+                  draft: 0,        // Xác nhận yêu cầu
+                  planning: 3,     // Lên kế hoạch chi tiết
+                  quoted: 1,       // Báo giá & Thống nhất
+                  contracted: 2,   // Ký hợp đồng & Đặt cọc
+                  in_progress: 4,  // Đặt venue & Nhà cung cấp
+                  completed: 7,    // All done
+                };
+                const currentStepIndex = EVENT_STATUS_TO_STEP[event?.status ?? ""] ?? -1;
 
-                return (
-                  <motion.div key={milestone.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className="relative flex items-start gap-6 mb-8">
-                    <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${milestone.status === "done" || milestone.status === "completed" ? "bg-secondary text-secondary-foreground" : milestone.status === "current" || milestone.status === "in_progress" ? "gradient-primary text-primary-foreground animate-pulse" : "bg-surface-high text-muted-foreground"}`}>
-                      {milestone.status === "done" || milestone.status === "completed" ? <CheckCircle size={18} /> : milestone.status === "current" || milestone.status === "in_progress" ? <Clock size={18} /> : <Circle size={18} />}
-                    </div>
-                    <div className="bg-surface-lowest rounded-xl p-5 shadow-ambient flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-serif text-foreground font-semibold">{milestone.title}</h3>
-                        <span className="font-body text-xs text-muted-foreground">{milestoneDate ? new Date(milestoneDate).toLocaleDateString("vi-VN") : "-"}</span>
+                return DEFAULT_MILESTONES.map((defaultStep, i) => {
+                  const apiMilestone = milestones[i];
+                  const milestoneDate = apiMilestone?.dueDate ?? apiMilestone?.milestoneDate ?? null;
+
+                  // Determine status: use event status mapping, fallback to API milestone
+                  let status: string;
+                  if (currentStepIndex >= 0) {
+                    if (i < currentStepIndex) status = "completed";
+                    else if (i === currentStepIndex) status = "in_progress";
+                    else status = "pending";
+                  } else {
+                    status = apiMilestone?.status ?? defaultStep.status;
+                  }
+
+                  return (
+                    <motion.div key={defaultStep.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className="relative flex items-start gap-6 mb-8">
+                      <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${status === "done" || status === "completed" ? "bg-secondary text-secondary-foreground" : status === "current" || status === "in_progress" ? "gradient-primary text-primary-foreground animate-pulse" : "bg-surface-high text-muted-foreground"}`}>
+                        {status === "done" || status === "completed" ? <CheckCircle size={18} /> : status === "current" || status === "in_progress" ? <Clock size={18} /> : <Circle size={18} />}
                       </div>
-                      <p className="font-body text-sm text-muted-foreground">{milestone.description || getMilestoneStatusLabel(milestone.status)}</p>
-                    </div>
-                  </motion.div>
-                );
-              })}
-              {milestones.length === 0 && <p className="font-body text-sm text-muted-foreground">Chưa có mốc triển khai cho sự kiện này.</p>}
+                      <div className="bg-surface-lowest rounded-xl p-5 shadow-ambient flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-serif text-foreground font-semibold">{defaultStep.title}</h3>
+                          <span className="font-body text-xs text-muted-foreground">{milestoneDate ? new Date(milestoneDate).toLocaleDateString("vi-VN") : ""}</span>
+                        </div>
+                        <p className="font-body text-sm text-muted-foreground">{defaultStep.description}</p>
+                      </div>
+                    </motion.div>
+                  );
+                });
+              })()}
             </div>
           </motion.div>
         )}

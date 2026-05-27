@@ -81,9 +81,9 @@ export const getEventStatusColor = (status?: string | null) =>
 
 export const eventStatusFilters = [
   { value: "all", label: "Tất cả" },
-  { value: "planning", label: "Lập kế hoạch" },
-  { value: "quoted", label: "Đã báo giá" },
   { value: "contracted", label: "Đã xác nhận" },
+  { value: "quoted", label: "Đã báo giá" },
+  { value: "planning", label: "Lập kế hoạch" },
   { value: "in_progress", label: "Đang triển khai" },
   { value: "completed", label: "Hoàn thành" },
   { value: "cancelled", label: "Đã hủy" },
