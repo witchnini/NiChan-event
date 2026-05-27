@@ -17,12 +17,20 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { apiClient } from "@/services/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { eventStatusLabels, eventStatusColors, eventStatusFilters, getEventStatusLabel } from "@/lib/eventDisplay";
 
 type Project = {
   id: string;
@@ -145,24 +153,9 @@ type KanbanResponse = {
   columns: KanbanColumn[];
 };
 
-const statuses = [
-  { value: "all", label: "Tất cả" },
-  { value: "planning", label: "Lập kế hoạch" },
-  { value: "quoted", label: "Đã báo giá" },
-  { value: "contracted", label: "Đã xác nhận" },
-  { value: "in_progress", label: "Đang triển khai" },
-  { value: "completed", label: "Hoàn thành" },
-];
-
-const statusLabel = Object.fromEntries(statuses.map((status) => [status.value, status.label]));
-const statusColors: Record<string, string> = {
-  planning: "bg-primary/10 text-primary",
-  quoted: "bg-secondary/10 text-secondary",
-  contracted: "bg-secondary/20 text-secondary",
-  in_progress: "bg-primary/15 text-primary",
-  completed: "bg-green-100 text-green-700",
-  cancelled: "bg-destructive/10 text-destructive",
-};
+const statuses = eventStatusFilters;
+const statusLabel = eventStatusLabels;
+const statusColors = eventStatusColors;
 
 const priorityColors: Record<string, string> = {
   high: "bg-destructive/10 text-destructive",
@@ -175,6 +168,10 @@ const priorityLabel: Record<KanbanTask["priority"], string> = {
   medium: "Trung bình",
   low: "Thấp",
 };
+
+const staffRoles = ["Event Manager", "Điều phối viên", "Thiết kế", "Lễ tân", "Âm thanh & ánh sáng", "MC"];
+const emptyCreateStaffForm = { name: "", email: "", phone: "", jobTitle: "", employmentStatus: "active" };
+const isValidPhone = (value: string) => !value || /^0[3-9]\d{8}$/.test(value);
 
 const taskStatusLabel: Record<string, string> = {
   todo: "Chờ xử lý",
@@ -310,10 +307,13 @@ const OrganizerProjects = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [staffDialogOpen, setStaffDialogOpen] = useState(false);
+  const [createStaffDialogOpen, setCreateStaffDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<KanbanTask | null>(null);
   const [targetStatus, setTargetStatus] = useState("todo");
   const [form, setForm] = useState(emptyForm);
   const [staffForm, setStaffForm] = useState({ staffUserId: "", roleText: "" });
+  const [createStaffForm, setCreateStaffForm] = useState(emptyCreateStaffForm);
+  const [createStaffSaving, setCreateStaffSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [contextLoading, setContextLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -432,7 +432,7 @@ const OrganizerProjects = () => {
   }, [allTasks, kanban?.project.eventDate]);
 
   const stats = useMemo(() => {
-    const active = projects.filter((project) => project.status !== "completed").length;
+    const active = projects.filter((project) => !["completed", "cancelled"].includes(project.status)).length;
     const running = projects.filter((project) => project.status === "in_progress").length;
     const completed = projects.filter((project) => project.status === "completed").length;
     const avgProgress = projects.length
@@ -591,11 +591,11 @@ const OrganizerProjects = () => {
     }
   };
 
-  const changeProjectStatus = async (status: "in_progress" | "completed") => {
+  const changeProjectStatus = async (status: string) => {
     if (!selectedProjectId) return;
     try {
       await apiClient.patch(`/organizer/projects/${selectedProjectId}/status`, { status });
-      toast.success(status === "in_progress" ? "Đã bắt đầu triển khai" : "Đã đánh dấu hoàn thành");
+      toast.success("Đã cập nhật trạng thái dự án");
       await refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Không thể cập nhật trạng thái dự án");
@@ -626,6 +626,42 @@ const OrganizerProjects = () => {
     }
   };
 
+  const handleCreateStaff = async () => {
+    const name = createStaffForm.name.trim();
+    const email = createStaffForm.email.trim().toLowerCase();
+    const phone = createStaffForm.phone.trim();
+    const jobTitle = createStaffForm.jobTitle.trim();
+
+    if (!name || !email || !jobTitle) {
+      toast.error("Vui lòng nhập họ tên, email và vai trò");
+      return;
+    }
+    if (!isValidPhone(phone)) {
+      toast.error("Số điện thoại phải đúng định dạng Việt Nam, ví dụ 0901234567");
+      return;
+    }
+
+    setCreateStaffSaving(true);
+    try {
+      await apiClient.post("/organizer/staff", {
+        name,
+        email,
+        phone: phone || undefined,
+        jobTitle,
+        employmentStatus: createStaffForm.employmentStatus,
+      });
+      toast.success("Đã tạo nhân sự mới");
+      setCreateStaffDialogOpen(false);
+      setCreateStaffForm(emptyCreateStaffForm);
+      const staffData = await apiClient.get<StaffOption[]>("/organizer/staff", { pageSize: 100 });
+      setStaff(staffData);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Không thể tạo nhân sự");
+    } finally {
+      setCreateStaffSaving(false);
+    }
+  };
+
   const removeProjectStaff = async (assignmentId: string) => {
     try {
       await apiClient.del(`/organizer/staff/assignments/${assignmentId}`);
@@ -634,26 +670,6 @@ const OrganizerProjects = () => {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Không thể gỡ nhân sự");
     }
-  };
-
-  const renderProjectActions = () => {
-    const status = kanban?.project.status;
-    if (!status) return null;
-
-    return (
-      <div className="flex gap-2 flex-wrap">
-        {["planning", "quoted", "contracted"].includes(status) && (
-          <Button variant="hero" size="sm" onClick={() => changeProjectStatus("in_progress")}>
-            <PlayCircle size={14} /> Bắt đầu triển khai
-          </Button>
-        )}
-        {status === "in_progress" && (
-          <Button variant="outline" size="sm" onClick={() => changeProjectStatus("completed")}>
-            <CheckCircle size={14} /> Hoàn thành
-          </Button>
-        )}
-      </div>
-    );
   };
 
   if (loading) return <div className="font-body text-muted-foreground">Đang tải dự án...</div>;
@@ -791,10 +807,16 @@ const OrganizerProjects = () => {
                   </div>
                 </div>
                 <div className="flex flex-col items-start lg:items-end gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-body font-semibold ${statusColors[kanban.project.status] ?? "bg-muted text-muted-foreground"}`}>
-                    {statusLabel[kanban.project.status] ?? kanban.project.status}
-                  </span>
-                  {renderProjectActions()}
+                  <select
+                    value={kanban.project.status}
+                    onChange={(event) => changeProjectStatus(event.target.value)}
+                    className={`rounded-xl px-3 py-2 font-body text-sm font-semibold ${statusColors[kanban.project.status] ?? "bg-muted text-muted-foreground"}`}
+                    aria-label="Trạng thái dự án"
+                  >
+                    {statuses.filter((status) => status.value !== "all").map((status) => (
+                      <option key={status.value} value={status.value}>{status.label}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -953,9 +975,24 @@ const OrganizerProjects = () => {
                     {projectStaff.length} nhân sự đang được gắn vào dự án này
                   </p>
                 </div>
-                <Button variant="hero" size="sm" onClick={openAssignStaff} disabled={availableStaffForProject.length === 0}>
-                  <UserPlus size={14} /> Thêm nhân sự
-                </Button>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={openAssignStaff}
+                    disabled={availableStaffForProject.length === 0}
+                  >
+                    <UserPlus size={14} /> Phân công vào dự án
+                  </Button>
+                  <Button
+                    variant="hero"
+                    size="sm"
+                    onClick={() => setCreateStaffDialogOpen(true)}
+                  >
+                    <Plus size={14} /> Thêm nhân sự mới
+                  </Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -1149,10 +1186,93 @@ const OrganizerProjects = () => {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={createStaffDialogOpen} onOpenChange={setCreateStaffDialogOpen}>
+        <DialogContent className="sm:max-w-[460px] rounded-2xl border-foreground/30 bg-background p-6">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-xl">Thêm nhân sự mới</DialogTitle>
+            <DialogDescription className="sr-only">
+              Biểu mẫu tạo tài khoản nhân sự mới trong hệ thống.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label className="font-body text-sm text-foreground mb-1 block">Họ và tên *</label>
+              <Input
+                value={createStaffForm.name}
+                onChange={(event) => setCreateStaffForm((current) => ({ ...current, name: event.target.value }))}
+                placeholder="Nguyễn Văn A"
+                className="rounded-xl border-none bg-surface-low"
+              />
+            </div>
+
+            <div>
+              <label className="font-body text-sm text-foreground mb-1 block">Vai trò *</label>
+              <select
+                value={createStaffForm.jobTitle}
+                onChange={(event) => setCreateStaffForm((current) => ({ ...current, jobTitle: event.target.value }))}
+                className="w-full rounded-xl bg-surface-low p-2.5 font-body text-sm text-foreground border-none"
+              >
+                <option value="">Chọn vai trò</option>
+                {staffRoles.map((role) => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="font-body text-sm text-foreground mb-1 block">Số điện thoại</label>
+                <Input
+                  value={createStaffForm.phone}
+                  onChange={(event) => setCreateStaffForm((current) => ({ ...current, phone: event.target.value }))}
+                  placeholder="0901234567"
+                  className="rounded-xl border-none bg-surface-low"
+                />
+              </div>
+              <div>
+                <label className="font-body text-sm text-foreground mb-1 block">Email *</label>
+                <Input
+                  type="email"
+                  value={createStaffForm.email}
+                  onChange={(event) => setCreateStaffForm((current) => ({ ...current, email: event.target.value }))}
+                  placeholder="email@example.com"
+                  className="rounded-xl border-none bg-surface-low"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="font-body text-sm text-foreground mb-1 block">Trạng thái</label>
+              <select
+                value={createStaffForm.employmentStatus}
+                onChange={(event) => setCreateStaffForm((current) => ({ ...current, employmentStatus: event.target.value }))}
+                className="w-full rounded-xl bg-surface-low p-2.5 font-body text-sm text-foreground border-none"
+              >
+                <option value="active">Đang làm việc</option>
+                <option value="inactive">Tạm nghỉ</option>
+              </select>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-1">
+            <Button variant="outline" onClick={() => setCreateStaffDialogOpen(false)} disabled={createStaffSaving}>
+              Hủy
+            </Button>
+            <Button variant="hero" onClick={handleCreateStaff} disabled={createStaffSaving}>
+              {createStaffSaving ? "Đang tạo..." : "Tạo nhân sự"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={staffDialogOpen} onOpenChange={setStaffDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-serif">Thêm nhân sự dự án</DialogTitle>
+            <DialogTitle className="font-serif">Thêm nhân sự đã tạo vào dự án</DialogTitle>
+            <DialogDescription className="sr-only">
+              Biểu mẫu thêm nhân sự đã tạo vào dự án đang chọn.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>

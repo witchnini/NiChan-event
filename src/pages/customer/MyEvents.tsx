@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import SectionHeading from "@/components/SectionHeading";
 import { apiClient } from "@/services/apiClient";
 import { toast } from "sonner";
-import { getEventDisplayName, getEventStatusLabel } from "@/lib/eventDisplay";
+import { getEventDisplayName, getEventStatusLabel, eventStatusFilters, eventStatusColors } from "@/lib/eventDisplay";
 
 type CustomerEvent = {
   id: string;
@@ -23,14 +23,7 @@ type CustomerEvent = {
   consultationRequest?: { customerName?: string | null; eventType?: string | null; note?: string | null } | null;
 };
 
-const statusFilters = [
-  { label: "Tất cả", value: "all" },
-  { label: "Đang chuẩn bị", value: "planning" },
-  { label: "Đã xác nhận", value: "contracted" },
-  { label: "Đang triển khai", value: "in_progress" },
-  { label: "Đã báo giá", value: "quoted" },
-  { label: "Hoàn thành", value: "completed" },
-];
+const statusFilters = eventStatusFilters;
 
 const money = (value?: string | number | null) => Number(value || 0).toLocaleString("vi-VN") + "đ";
 
@@ -86,7 +79,7 @@ const MyEvents = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="font-serif text-headline-md text-foreground">{getEventDisplayName(event)}</h3>
-                        <span className="px-3 py-1 rounded-full text-xs font-body font-semibold bg-primary/10 text-primary">{getEventStatusLabel(event.status)}</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-body font-semibold ${eventStatusColors[event.status] ?? "bg-muted text-muted-foreground"}`}>{getEventStatusLabel(event.status)}</span>
                       </div>
                       <div className="flex flex-wrap gap-4 text-sm font-body text-muted-foreground">
                         <span className="flex items-center gap-1"><Calendar size={14} /> {event.eventDate ? new Date(event.eventDate).toLocaleDateString("vi-VN") : "-"}</span>

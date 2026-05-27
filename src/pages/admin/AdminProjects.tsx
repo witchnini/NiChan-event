@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiClient } from "@/services/apiClient";
 import { toast } from "sonner";
+import { eventStatusLabels, eventStatusColors, eventStatusFilters, getEventStatusLabel } from "@/lib/eventDisplay";
 
 type Project = {
   id: string;
@@ -87,26 +88,9 @@ type ProjectDetail = {
   staffAssignments?: ProjectStaffAssignment[];
 };
 
-const statuses = [
-  { value: "all", label: "Tất cả" },
-  { value: "planning", label: "Lập kế hoạch" },
-  { value: "quoted", label: "Đã báo giá" },
-  { value: "contracted", label: "Đã xác nhận" },
-  { value: "in_progress", label: "Đang triển khai" },
-  { value: "completed", label: "Hoàn thành" },
-  { value: "cancelled", label: "Đã hủy" },
-];
-
-const statusLabel = Object.fromEntries(statuses.map((status) => [status.value, status.label]));
-const statusColors: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  planning: "bg-primary/10 text-primary",
-  quoted: "bg-secondary/10 text-secondary",
-  contracted: "bg-secondary/20 text-secondary",
-  in_progress: "bg-primary/15 text-primary",
-  completed: "bg-green-100 text-green-700",
-  cancelled: "bg-destructive/10 text-destructive",
-};
+const statuses = eventStatusFilters;
+const statusLabel = eventStatusLabels;
+const statusColors = eventStatusColors;
 
 const priorityLabel: Record<KanbanTask["priority"], string> = {
   high: "Cao",

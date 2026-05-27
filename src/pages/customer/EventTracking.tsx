@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { apiClient } from "@/services/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { getEventDisplayName, getEventStatusLabel, getMilestoneStatusLabel, getTransactionStatusLabel } from "@/lib/eventDisplay";
+import { getEventDisplayName, getEventStatusLabel, getMilestoneStatusLabel, getTransactionStatusLabel, eventStatusColors } from "@/lib/eventDisplay";
 
 type EventDetail = {
   id: string;
@@ -105,7 +105,7 @@ const EventTracking = () => {
               <p className="font-body text-sm text-muted-foreground mt-1">Quản lý dự án: {event?.organizerUser?.displayName ?? "Chưa phân công"}</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="px-4 py-2 rounded-full bg-secondary/10 text-secondary font-body text-sm font-semibold">{getEventStatusLabel(event?.status)}</span>
+              <span className={`px-4 py-2 rounded-full font-body text-sm font-semibold ${eventStatusColors[event?.status ?? ""] ?? "bg-muted text-muted-foreground"}`}>{getEventStatusLabel(event?.status)}</span>
               <span className="font-serif text-headline-md text-primary font-bold">{event?.progressPercent ?? 0}%</span>
             </div>
           </div>

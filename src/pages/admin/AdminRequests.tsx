@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { apiClient } from "@/services/apiClient";
 import { toast } from "sonner";
+import { requestStatusLabels, requestStatusColors, requestStatusFilters, getRequestStatusLabel } from "@/lib/eventDisplay";
 
 type RequestItem = {
   id: string;
@@ -30,23 +31,9 @@ type RequestItem = {
 
 type Manager = { id: string; displayName: string; email: string };
 
-const statuses = [
-  { value: "new",       label: "Mới" },
-  { value: "reviewing", label: "Đang xem xét" },
-  { value: "quoted",    label: "Đã báo giá" },
-  { value: "confirmed", label: "Đã xác nhận" },
-  { value: "rejected",  label: "Từ chối" },
-];
-
-const statusLabel = Object.fromEntries(statuses.map(s => [s.value, s.label]));
-
-const statusColors: Record<string, string> = {
-  new:       "bg-primary/10 text-primary",
-  reviewing: "bg-muted text-muted-foreground",
-  quoted:    "bg-secondary/10 text-secondary",
-  confirmed: "bg-secondary/20 text-secondary",
-  rejected:  "bg-destructive/10 text-destructive",
-};
+const statuses = requestStatusFilters;
+const statusLabel = requestStatusLabels;
+const statusColors = requestStatusColors;
 
 /** Trích tên sự kiện từ trường note (định dạng "Ten su kien: ...") */
 const parseEventNameFromNote = (note?: string | null): string | null => {

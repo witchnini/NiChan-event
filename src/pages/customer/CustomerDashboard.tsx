@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { apiClient } from "@/services/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { getEventDisplayName, getEventStatusLabel } from "@/lib/eventDisplay";
+import { getEventDisplayName, getEventStatusLabel, eventStatusColors } from "@/lib/eventDisplay";
 
 type DashboardEvent = {
   id: string;
@@ -104,7 +104,7 @@ const CustomerDashboard = () => {
                       <p className="font-body text-sm text-muted-foreground mt-1">{event.type} - {event.eventDate ? new Date(event.eventDate).toLocaleDateString("vi-VN") : "-"}</p>
                       <p className="font-body text-sm text-muted-foreground mt-1">Quản lý dự án: {event.organizerUser?.displayName ?? "Chưa phân công"}</p>
                     </div>
-                    <span className="px-3 py-1 rounded-full text-xs font-body font-semibold bg-primary/10 text-primary">{getEventStatusLabel(event.status)}</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-body font-semibold ${eventStatusColors[event.status] ?? "bg-muted text-muted-foreground"}`}>{getEventStatusLabel(event.status)}</span>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm font-body">

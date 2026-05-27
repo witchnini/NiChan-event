@@ -55,7 +55,7 @@ export const getEventDisplayName = (event: EventDisplaySource) =>
 
 export const eventStatusLabels: Record<string, string> = {
   draft: "Nháp",
-  planning: "Đang chuẩn bị",
+  planning: "Lập kế hoạch",
   quoted: "Đã báo giá",
   contracted: "Đã xác nhận",
   in_progress: "Đang triển khai",
@@ -65,6 +65,59 @@ export const eventStatusLabels: Record<string, string> = {
 
 export const getEventStatusLabel = (status?: string | null) =>
   status ? eventStatusLabels[status] ?? status : "-";
+
+export const eventStatusColors: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  planning: "bg-primary/10 text-primary",
+  quoted: "bg-secondary/10 text-secondary",
+  contracted: "bg-secondary/20 text-secondary",
+  in_progress: "bg-primary/15 text-primary",
+  completed: "bg-green-100 text-green-700",
+  cancelled: "bg-destructive/10 text-destructive",
+};
+
+export const getEventStatusColor = (status?: string | null) =>
+  status ? eventStatusColors[status] ?? "bg-muted text-muted-foreground" : "bg-muted text-muted-foreground";
+
+export const eventStatusFilters = [
+  { value: "all", label: "Tất cả" },
+  { value: "planning", label: "Lập kế hoạch" },
+  { value: "quoted", label: "Đã báo giá" },
+  { value: "contracted", label: "Đã xác nhận" },
+  { value: "in_progress", label: "Đang triển khai" },
+  { value: "completed", label: "Hoàn thành" },
+  { value: "cancelled", label: "Đã hủy" },
+];
+
+export const requestStatusLabels: Record<string, string> = {
+  new: "Mới",
+  reviewing: "Đang xem xét",
+  quoted: "Đã báo giá",
+  confirmed: "Đã xác nhận",
+  rejected: "Từ chối",
+};
+
+export const requestStatusColors: Record<string, string> = {
+  new: "bg-primary/10 text-primary",
+  reviewing: "bg-muted text-muted-foreground",
+  quoted: "bg-secondary/10 text-secondary",
+  confirmed: "bg-secondary/20 text-secondary",
+  rejected: "bg-destructive/10 text-destructive",
+};
+
+export const requestStatusFilters = [
+  { value: "new", label: "Mới" },
+  { value: "reviewing", label: "Đang xem xét" },
+  { value: "quoted", label: "Đã báo giá" },
+  { value: "confirmed", label: "Đã xác nhận" },
+  { value: "rejected", label: "Từ chối" },
+];
+
+export const getRequestStatusLabel = (status?: string | null) =>
+  status ? requestStatusLabels[status] ?? status : "-";
+
+export const getRequestStatusColor = (status?: string | null) =>
+  status ? requestStatusColors[status] ?? "bg-muted text-muted-foreground" : "bg-muted text-muted-foreground";
 
 export const contractStatusLabels: Record<string, string> = {
   draft: "Nháp",

@@ -1,11 +1,39 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Phone, Mail, MoreHorizontal, Building2, Edit2, Trash2, MapPin } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Phone,
+  Mail,
+  MoreHorizontal,
+  Building2,
+  Edit2,
+  Trash2,
+  MapPin,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { apiClient } from "@/services/apiClient";
 import { toast } from "sonner";
 
@@ -22,8 +50,20 @@ type Vendor = {
   status: "active" | "paused" | "inactive";
 };
 
-const emptyVendor = { name: "", categoryId: "", phone: "", email: "", contactName: "", address: "", status: "active" };
-const statusLabel: Record<string, string> = { active: "Dang hop tac", paused: "Tam dung", inactive: "Ngung hop tac" };
+const emptyVendor = {
+  name: "",
+  categoryId: "",
+  phone: "",
+  email: "",
+  contactName: "",
+  address: "",
+  status: "active",
+};
+const statusLabel: Record<string, string> = {
+  active: "Dang hop tac",
+  paused: "Tam dung",
+  inactive: "Ngung hop tac",
+};
 
 const AdminVendors = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -45,19 +85,23 @@ const AdminVendors = () => {
       });
       setVendors(data);
     } catch (error) {
-      toast.error("Khong tai duoc danh sach nha cung cap");
+      toast.error("Không tải được danh sách nhà cung cấp");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    apiClient.get<VendorCategory[]>("/admin/vendors/categories")
-      .then(data => {
+    apiClient
+      .get<VendorCategory[]>("/admin/vendors/categories")
+      .then((data) => {
         setCategories(data);
-        setForm(prev => ({ ...prev, categoryId: prev.categoryId || data[0]?.id || "" }));
+        setForm((prev) => ({
+          ...prev,
+          categoryId: prev.categoryId || data[0]?.id || "",
+        }));
       })
-      .catch(() => toast.error("Khong tai duoc danh muc nha cung cap"));
+      .catch(() => toast.error("Không tải được danh mục nhà cung cấp"));
   }, []);
 
   useEffect(() => {
@@ -127,24 +171,93 @@ const AdminVendors = () => {
 
   const VendorForm = () => (
     <div className="space-y-4">
-      <div><label className="font-body text-sm text-foreground mb-1 block">Tên NCC *</label>
-        <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="rounded-xl bg-surface-lowest font-body border-none" />
+      <div>
+        <label className="font-body text-sm text-foreground mb-1 block">
+          Tên NCC *
+        </label>
+        <Input
+          value={form.name}
+          onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+          className="rounded-xl bg-surface-lowest font-body border-none"
+        />
       </div>
-      <div><label className="font-body text-sm text-foreground mb-1 block">Danh mục *</label>
-        <Select value={form.categoryId} onValueChange={v => setForm(p => ({ ...p, categoryId: v }))}>
-          <SelectTrigger className="rounded-xl"><SelectValue placeholder="Chọn danh mục" /></SelectTrigger>
-          <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+      <div>
+        <label className="font-body text-sm text-foreground mb-1 block">
+          Danh mục *
+        </label>
+        <Select
+          value={form.categoryId}
+          onValueChange={(v) => setForm((p) => ({ ...p, categoryId: v }))}
+        >
+          <SelectTrigger className="rounded-xl">
+            <SelectValue placeholder="Chọn danh mục" />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div><label className="font-body text-sm text-foreground mb-1 block">Điện thoại</label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="rounded-xl bg-surface-lowest font-body border-none" /></div>
-        <div><label className="font-body text-sm text-foreground mb-1 block">Email</label><Input value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="rounded-xl bg-surface-lowest font-body border-none" /></div>
+        <div>
+          <label className="font-body text-sm text-foreground mb-1 block">
+            Điện thoại
+          </label>
+          <Input
+            value={form.phone}
+            onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+            className="rounded-xl bg-surface-lowest font-body border-none"
+          />
+        </div>
+        <div>
+          <label className="font-body text-sm text-foreground mb-1 block">
+            Email
+          </label>
+          <Input
+            value={form.email}
+            onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+            className="rounded-xl bg-surface-lowest font-body border-none"
+          />
+        </div>
       </div>
-      <div><label className="font-body text-sm text-foreground mb-1 block">Người liên hệ</label><Input value={form.contactName} onChange={e => setForm(p => ({ ...p, contactName: e.target.value }))} className="rounded-xl bg-surface-lowest font-body border-none" /></div>
-      <div><label className="font-body text-sm text-foreground mb-1 block">Địa chỉ *</label><Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} className="rounded-xl bg-surface-lowest font-body border-none" /></div>
-      <div><label className="font-body text-sm text-foreground mb-1 block">Trạng thái</label>
-        <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v as Vendor["status"] }))}>
-          <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+      <div>
+        <label className="font-body text-sm text-foreground mb-1 block">
+          Người liên hệ
+        </label>
+        <Input
+          value={form.contactName}
+          onChange={(e) =>
+            setForm((p) => ({ ...p, contactName: e.target.value }))
+          }
+          className="rounded-xl bg-surface-lowest font-body border-none"
+        />
+      </div>
+      <div>
+        <label className="font-body text-sm text-foreground mb-1 block">
+          Địa chỉ *
+        </label>
+        <Input
+          value={form.address}
+          onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
+          className="rounded-xl bg-surface-lowest font-body border-none"
+        />
+      </div>
+      <div>
+        <label className="font-body text-sm text-foreground mb-1 block">
+          Trạng thái
+        </label>
+        <Select
+          value={form.status}
+          onValueChange={(v) =>
+            setForm((p) => ({ ...p, status: v as Vendor["status"] }))
+          }
+        >
+          <SelectTrigger className="rounded-xl">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="active">Đang hợp tác</SelectItem>
             <SelectItem value="paused">Tạm dừng</SelectItem>
@@ -159,52 +272,117 @@ const AdminVendors = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-headline-lg text-foreground">Quan ly nha cung cap</h1>
-          <p className="font-body text-sm text-muted-foreground">{loading ? "Dang tai..." : `${vendors.length} doi tac`}</p>
+          <h1 className="font-serif text-headline-lg text-foreground">
+            Quản lý nhà cung cấp
+          </h1>
+          <p className="font-body text-sm text-muted-foreground">
+            {loading ? "Đang tải..." : `${vendors.length} đối tác`}
+          </p>
         </div>
-        <Button variant="hero" size="sm" onClick={() => { setForm({ ...emptyVendor, categoryId: categories[0]?.id || "" }); setCreateOpen(true); }}><Plus size={16} /> Them NCC</Button>
+        <Button
+          variant="hero"
+          size="sm"
+          onClick={() => {
+            setForm({ ...emptyVendor, categoryId: categories[0]?.id || "" });
+            setCreateOpen(true);
+          }}
+        >
+          <Plus size={16} /> Thêm NCC
+        </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tim nha cung cap..." className="pl-10 rounded-xl bg-surface-lowest font-body border-none" />
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Tìm nhà cung cấp..."
+            className="pl-10 rounded-xl bg-surface-lowest font-body border-none"
+          />
         </div>
         <div className="flex gap-2 flex-wrap">
-          {[{ id: "all", name: "Tat ca" }, ...categories].map(cat => (
-            <button key={cat.id} onClick={() => setFilterCat(cat.id)}
+          {[{ id: "all", name: "Tat ca" }, ...categories].map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setFilterCat(cat.id)}
               className={`px-3 py-2 rounded-xl font-body text-sm transition-all ${filterCat === cat.id ? "gradient-primary text-primary-foreground" : "bg-surface-lowest text-muted-foreground hover:text-foreground"}`}
-            >{cat.name}</button>
+            >
+              {cat.name}
+            </button>
           ))}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {vendors.map((vendor, i) => (
-          <motion.div key={vendor.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-surface-lowest rounded-xl p-5 shadow-ambient hover:shadow-ambient-lg transition-shadow">
+          <motion.div
+            key={vendor.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="bg-surface-lowest rounded-xl p-5 shadow-ambient hover:shadow-ambient-lg transition-shadow"
+          >
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-surface-low flex items-center justify-center"><Building2 size={18} className="text-primary" /></div>
+                <div className="w-10 h-10 rounded-xl bg-surface-low flex items-center justify-center">
+                  <Building2 size={18} className="text-primary" />
+                </div>
                 <div>
-                  <h3 className="font-body text-sm font-semibold text-foreground">{vendor.name}</h3>
-                  <p className="font-body text-xs text-primary">{vendor.category?.name ?? "-"}</p>
+                  <h3 className="font-body text-sm font-semibold text-foreground">
+                    {vendor.name}
+                  </h3>
+                  <p className="font-body text-xs text-primary">
+                    {vendor.category?.name ?? "-"}
+                  </p>
                 </div>
               </div>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-body font-semibold ${vendor.status === "active" ? "bg-secondary/10 text-secondary" : "bg-muted text-muted-foreground"}`}>{statusLabel[vendor.status]}</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-body font-semibold ${vendor.status === "active" ? "bg-secondary/10 text-secondary" : "bg-muted text-muted-foreground"}`}
+              >
+                {statusLabel[vendor.status]}
+              </span>
             </div>
             <div className="space-y-1.5 text-xs font-body text-muted-foreground">
-              <p className="flex items-center gap-2"><Phone size={11} /> {vendor.phone || "-"}</p>
-              <p className="flex items-center gap-2"><Mail size={11} /> {vendor.email || "-"}</p>
-              <p className="flex items-center gap-2"><MapPin size={11} /> {vendor.address}</p>
+              <p className="flex items-center gap-2">
+                <Phone size={11} /> {vendor.phone || "-"}
+              </p>
+              <p className="flex items-center gap-2">
+                <Mail size={11} /> {vendor.email || "-"}
+              </p>
+              <p className="flex items-center gap-2">
+                <MapPin size={11} /> {vendor.address}
+              </p>
             </div>
             <div className="flex gap-2 mt-4">
-              <Button variant="outline" size="sm" className="flex-1 text-xs rounded-xl" onClick={() => openEdit(vendor)}>Chinh sua</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs rounded-xl"
+                onClick={() => openEdit(vendor)}
+              >
+                Chỉnh sửa
+              </Button>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal size={14} /></Button></DropdownMenuTrigger>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal size={14} />
+                  </Button>
+                </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => openEdit(vendor)}><Edit2 size={12} className="mr-2" /> Chinh sua</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => openEdit(vendor)}>
+                    <Edit2 size={12} className="mr-2" /> Chỉnh sửa
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleDelete(vendor.id)} className="text-destructive"><Trash2 size={12} className="mr-2" /> Xoa</DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleDelete(vendor.id)}
+                    className="text-destructive"
+                  >
+                    <Trash2 size={12} className="mr-2" /> Xóa
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -214,22 +392,36 @@ const AdminVendors = () => {
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle className="font-serif">Them nha cung cap</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="font-serif">Thêm nhà cung cấp</DialogTitle>
+          </DialogHeader>
           <VendorForm />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Huy</Button>
-            <Button variant="hero" onClick={handleCreate}>Them</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              Hủy
+            </Button>
+            <Button variant="hero" onClick={handleCreate}>
+              Thêm
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!editItem} onOpenChange={() => setEditItem(null)}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle className="font-serif">Chinh sua nha cung cap</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="font-serif">
+              Chỉnh sửa nhà cung cấp
+            </DialogTitle>
+          </DialogHeader>
           <VendorForm />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditItem(null)}>Huy</Button>
-            <Button variant="hero" onClick={handleEdit}>Luu</Button>
+            <Button variant="outline" onClick={() => setEditItem(null)}>
+              Hủy
+            </Button>
+            <Button variant="hero" onClick={handleEdit}>
+              Lưu
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
