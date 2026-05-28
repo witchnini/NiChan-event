@@ -1,39 +1,102 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
 import {
-  Globe, FileText, Image, Star, Trash2, Eye, Plus,
-  Loader2, LayoutGrid, BookOpen, MessageSquare, Settings2,
-  TrendingUp, Calendar, Tag, CheckCircle2, EyeOff, Sparkles,
+  ArrowLeft,
+  BookOpen,
+  Calendar,
+  CheckCircle2,
+  Columns3,
+  Edit3,
+  Eye,
+  EyeOff,
+  FileText,
+  Globe,
+  Hash,
+  Image,
+  LayoutGrid,
+  Link,
+  List,
+  Loader2,
+  MessageCircle,
+  MessageSquare,
+  PanelRight,
+  Plus,
+  Save,
+  Search,
+  Send,
+  Share2,
+  Sparkles,
+  Star,
+  Tag,
+  Tags,
+  Trash2,
+  TrendingUp,
+  Wand2,
+  X,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/services/apiClient";
 import { toast } from "sonner";
+
+type ContentKind = "service" | "portfolio" | "blog";
+type ContentTab = ContentKind | "reviews";
+type EditorTab = "basic" | "content" | "layout" | "seo";
+
+type ServiceCategory = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+type ServiceItem = {
+  id: string;
+  title: string;
+  slug: string;
+  shortDescription?: string;
+  priceFrom?: number | string | null;
+  priceTo?: number | string | null;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  category?: ServiceCategory;
+};
 
 type PortfolioItem = {
   id: string;
   title: string;
+  slug?: string;
   category: string;
   status: string;
   viewCount?: number;
+  guestCount?: number | null;
+  coverImageUrl?: string;
+  publishedAt?: string | null;
 };
+
 type BlogPost = {
   id: string;
   title: string;
+  slug?: string;
   category: string;
+  excerpt?: string | null;
   status: string;
   publishedAt?: string | null;
   viewCount?: number;
 };
+
 type Review = {
   id: string;
   ratingOverall: number;
@@ -42,148 +105,297 @@ type Review = {
   customerUser?: { displayName: string };
   event?: { name: string };
 };
-type ServiceItem = {
-  id: string;
+
+type LayoutOptions = {
+  wrapper: "container" | "container-fluid" | "wide";
+  sidebar: "right" | "left" | "none";
+  contentWrap: "wrapped" | "plain";
+  showTitle: boolean;
+  showMeta: boolean;
+  showTags: boolean;
+  showBreadcrumbs: boolean;
+  showShare: boolean;
+  showRelated: boolean;
+  showCover: boolean;
+  showSummary: boolean;
+  showComments: boolean;
+};
+
+type EditorForm = {
+  kind: ContentKind;
   title: string;
-  shortDescription?: string;
-  priceFrom?: number | string | null;
-  isActive?: boolean;
-  category?: { name: string };
+  slug: string;
+  category: string;
+  categorySlug: string;
+  coverImageUrl: string;
+  tags: string[];
+  tagDraft: string;
+  summary: string;
+  content: string;
+  priceFrom: string;
+  priceTo: string;
+  guestFrom: string;
+  guestTo: string;
+  guestCount: string;
+  locationText: string;
+  isPublished: boolean;
+  isFeatured: boolean;
+  layout: LayoutOptions;
+  metaDescription: string;
+  metaKeywords: string;
+};
+
+const defaultLayout: LayoutOptions = {
+  wrapper: "container",
+  sidebar: "right",
+  contentWrap: "wrapped",
+  showTitle: true,
+  showMeta: true,
+  showTags: true,
+  showBreadcrumbs: true,
+  showShare: true,
+  showRelated: true,
+  showCover: true,
+  showSummary: true,
+  showComments: true,
+};
+
+const labels: Record<ContentKind, { singular: string; plural: string; create: string; icon: LucideIcon }> = {
+  service: { singular: "Dịch vụ", plural: "Dịch vụ", create: "Tạo dịch vụ", icon: Sparkles },
+  portfolio: { singular: "Portfolio", plural: "Portfolio", create: "Tạo portfolio", icon: LayoutGrid },
+  blog: { singular: "Blog", plural: "Blog", create: "Tạo bài viết", icon: BookOpen },
+};
+
+const editorTabs: { value: EditorTab; label: string; icon: LucideIcon }[] = [
+  { value: "basic", label: "Thông tin cơ bản", icon: FileText },
+  { value: "content", label: "Nội dung bài viết", icon: Edit3 },
+  { value: "layout", label: "Bố cục và khối", icon: LayoutGrid },
+  { value: "seo", label: "Thông tin SEO", icon: Globe },
+];
+
+const blogStatusMap: Record<string, { label: string; color: string }> = {
+  published: { label: "Đã đăng", color: "bg-emerald-500/10 text-emerald-700 border-emerald-200" },
+  scheduled: { label: "Đã lên lịch", color: "bg-sky-500/10 text-sky-700 border-sky-200" },
+  draft: { label: "Bản nháp", color: "bg-amber-500/10 text-amber-700 border-amber-200" },
+  hidden: { label: "Đã ẩn", color: "bg-muted text-muted-foreground border-border" },
 };
 
 const portfolioStatusMap: Record<string, { label: string; color: string }> = {
-  published: { label: "Đã đăng",  color: "bg-emerald-500/10 text-emerald-600 border border-emerald-200" },
-  draft:     { label: "Bản nháp", color: "bg-amber-500/10 text-amber-600 border border-amber-200" },
-  hidden:    { label: "Ẩn",       color: "bg-muted text-muted-foreground border border-border" },
-};
-
-const blogStatusMap: Record<string, { label: string; color: string }> = {
-  published: { label: "Đã đăng",  color: "bg-emerald-500/10 text-emerald-600 border border-emerald-200" },
-  draft:     { label: "Bản nháp", color: "bg-amber-500/10 text-amber-600 border border-amber-200" },
-  archived:  { label: "Lưu trữ", color: "bg-muted text-muted-foreground border border-border" },
+  visible: { label: "Đang hiển thị", color: "bg-emerald-500/10 text-emerald-700 border-emerald-200" },
+  hidden: { label: "Đã ẩn", color: "bg-muted text-muted-foreground border-border" },
 };
 
 const reviewStatusMap: Record<string, { label: string; color: string }> = {
-  pending:  { label: "Chờ duyệt", color: "bg-amber-500/10 text-amber-600 border border-amber-200" },
-  approved: { label: "Đã duyệt",  color: "bg-emerald-500/10 text-emerald-600 border border-emerald-200" },
-  hidden:   { label: "Đã ẩn",     color: "bg-muted text-muted-foreground border border-border" },
+  pending: { label: "Chờ duyệt", color: "bg-amber-500/10 text-amber-700 border-amber-200" },
+  approved: { label: "Đã duyệt", color: "bg-emerald-500/10 text-emerald-700 border-emerald-200" },
+  hidden: { label: "Đã ẩn", color: "bg-muted text-muted-foreground border-border" },
 };
 
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+
+const numberOrNull = (value: string) => {
+  if (!value.trim()) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatMoney = (value?: number | string | null) => {
+  if (value === null || value === undefined || value === "") return "Chưa đặt giá";
+  return `${Number(value).toLocaleString("vi-VN")}đ`;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
+const buildEmptyForm = (kind: ContentKind, categories: ServiceCategory[] = []): EditorForm => ({
+  kind,
+  title: "",
+  slug: "",
+  category: kind === "portfolio" ? "Sự kiện nổi bật" : "Cẩm nang",
+  categorySlug: kind === "service" ? categories[0]?.slug ?? "" : "",
+  coverImageUrl: "",
+  tags: [],
+  tagDraft: "",
+  summary: "",
+  content: "",
+  priceFrom: "",
+  priceTo: "",
+  guestFrom: "",
+  guestTo: "",
+  guestCount: "",
+  locationText: "",
+  isPublished: true,
+  isFeatured: false,
+  layout: { ...defaultLayout, sidebar: kind === "service" ? "none" : "right" },
+  metaDescription: "",
+  metaKeywords: "",
+});
+
 const StatusChip = ({ label, color }: { label: string; color: string }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-body font-semibold ${color}`}>
+  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${color}`}>
     {label}
   </span>
 );
 
-const EmptyState = ({ icon: Icon, message }: { icon: React.ElementType; message: string }) => (
-  <div className="flex flex-col items-center justify-center py-16 text-center">
-    <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
-      <Icon size={24} className="text-muted-foreground" />
+const EmptyState = ({ icon: Icon, message }: { icon: LucideIcon; message: string }) => (
+  <div className="flex min-h-[260px] flex-col items-center justify-center rounded-md border border-dashed border-border bg-surface-lowest text-center">
+    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-surface-low">
+      <Icon size={22} className="text-muted-foreground" />
     </div>
     <p className="font-body text-sm text-muted-foreground">{message}</p>
   </div>
 );
 
-// ----- Form types -----
-type PortfolioForm = {
-  title: string;
-  slug: string;
-  category: string;
-  coverImageUrl: string;
-  guestCount: string;
-  status: "draft" | "published" | "hidden";
-};
-const emptyPortfolio: PortfolioForm = {
-  title: "", slug: "", category: "", coverImageUrl: "", guestCount: "", status: "draft",
-};
+const FieldLabel = ({ children, required = false }: { children: React.ReactNode; required?: boolean }) => (
+  <Label className="font-body text-sm font-semibold text-foreground">
+    {children}
+    {required && <span className="ml-1 text-destructive">(*)</span>}
+  </Label>
+);
 
-type BlogForm = {
-  title: string;
-  slug: string;
-  category: string;
-  excerpt: string;
-  content: string;
-  coverImageUrl: string;
-  status: "draft" | "published" | "archived";
-};
-const emptyBlog: BlogForm = {
-  title: "", slug: "", category: "", excerpt: "", content: "", coverImageUrl: "", status: "draft",
-};
+const SwitchRow = ({
+  label,
+  checked,
+  onCheckedChange,
+  icon: Icon,
+}: {
+  label: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  icon: LucideIcon;
+}) => (
+  <label className="flex min-h-10 items-center gap-3 text-sm text-foreground">
+    <Switch checked={checked} onCheckedChange={onCheckedChange} />
+    <Icon size={15} className="text-muted-foreground" />
+    <span>{label}</span>
+  </label>
+);
 
-type ServiceForm = {
-  title: string;
-  slug: string;
-  shortDescription: string;
-  description: string;
-  priceFrom: string;
-  priceTo: string;
-  coverImageUrl: string;
-  categorySlug: string;
-  isActive: boolean;
-};
-const emptyService: ServiceForm = {
-  title: "", slug: "", shortDescription: "", description: "",
-  priceFrom: "", priceTo: "", coverImageUrl: "", categorySlug: "", isActive: true,
-};
-
-const slugify = (s: string) =>
-  s.toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim().replace(/\s+/g, "-");
+const ToolbarButton = ({
+  label,
+  icon: Icon,
+  onClick,
+}: {
+  label: string;
+  icon?: LucideIcon;
+  onClick: () => void;
+}) => (
+  <button
+    type="button"
+    title={label}
+    onClick={onClick}
+    className="flex h-9 min-w-9 items-center justify-center rounded-md border border-border bg-background px-2 text-xs font-semibold text-foreground transition-colors hover:bg-surface-low"
+  >
+    {Icon ? <Icon size={15} /> : label}
+  </button>
+);
 
 const AdminContent = () => {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Dialog state
-  const [portfolioOpen, setPortfolioOpen] = useState(false);
-  const [blogOpen, setBlogOpen] = useState(false);
-  const [serviceOpen, setServiceOpen] = useState(false);
-  const [portfolioForm, setPortfolioForm] = useState<PortfolioForm>(emptyPortfolio);
-  const [blogForm, setBlogForm] = useState<BlogForm>(emptyBlog);
-  const [serviceForm, setServiceForm] = useState<ServiceForm>(emptyService);
   const [submitting, setSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<ContentTab>("service");
+  const [search, setSearch] = useState("");
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorTab, setEditorTab] = useState<EditorTab>("basic");
+  const [form, setForm] = useState<EditorForm>(() => buildEmptyForm("service"));
 
   const load = async () => {
     setLoading(true);
     try {
-      const [portfolio, blog, reviewData, serviceList, cats] = await Promise.all([
+      const [serviceList, cats, portfolio, blog, reviewData] = await Promise.all([
+        apiClient.get<ServiceItem[]>("/admin/content/services", { pageSize: 100 }),
+        apiClient.get<ServiceCategory[]>("/admin/content/service-categories"),
         apiClient.get<PortfolioItem[]>("/admin/content/portfolio", { pageSize: 100 }),
         apiClient.get<BlogPost[]>("/admin/content/blog-posts", { pageSize: 100 }),
         apiClient.get<Review[]>("/admin/content/reviews", { pageSize: 100 }),
-        apiClient.get<ServiceItem[]>("/public/services").catch(() => []),
-        apiClient.get<{ id: string; name: string; slug: string }[]>("/admin/content/service-categories").catch(() => []),
       ]);
+      setServices(serviceList);
+      setCategories(cats);
       setPortfolioItems(portfolio);
       setBlogPosts(blog);
       setReviews(reviewData);
-      setServices(serviceList);
-      setCategories(cats);
-    } catch {
-      toast.error("Không thể tải nội dung, vui lòng thử lại");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể tải dữ liệu nội dung"));
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
-  const deletePortfolio = async (id: string) => {
-    await apiClient.del(`/admin/content/portfolio/${id}`);
-    toast.success("Đã xoá case study thành công");
-    await load();
+  const filteredServices = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword || activeTab !== "service") return services;
+    return services.filter((item) =>
+      [item.title, item.shortDescription, item.category?.name].some((value) =>
+        value?.toLowerCase().includes(keyword),
+      ),
+    );
+  }, [activeTab, search, services]);
+
+  const filteredPortfolio = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword || activeTab !== "portfolio") return portfolioItems;
+    return portfolioItems.filter((item) =>
+      [item.title, item.category].some((value) => value?.toLowerCase().includes(keyword)),
+    );
+  }, [activeTab, portfolioItems, search]);
+
+  const filteredBlogs = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword || activeTab !== "blog") return blogPosts;
+    return blogPosts.filter((post) =>
+      [post.title, post.category, post.excerpt].some((value) => value?.toLowerCase().includes(keyword)),
+    );
+  }, [activeTab, blogPosts, search]);
+
+  const pendingReviews = reviews.filter((review) => review.status === "pending").length;
+
+  const openCreate = (kind: ContentKind) => {
+    setForm(buildEmptyForm(kind, categories));
+    setEditorTab("basic");
+    setEditorOpen(true);
   };
 
-  const deleteBlog = async (id: string) => {
-    await apiClient.del(`/admin/content/blog-posts/${id}`);
-    toast.success("Đã xoá bài viết thành công");
-    await load();
+  const addTag = () => {
+    const tag = form.tagDraft.trim().replace(/^#/, "");
+    if (!tag) return;
+    if (form.tags.includes(tag)) {
+      setForm((current) => ({ ...current, tagDraft: "" }));
+      return;
+    }
+    setForm((current) => ({ ...current, tags: [...current.tags, tag], tagDraft: "" }));
+  };
+
+  const removeTag = (tag: string) => {
+    setForm((current) => ({ ...current, tags: current.tags.filter((item) => item !== tag) }));
+  };
+
+  const insertContent = (snippet: string) => {
+    setForm((current) => ({
+      ...current,
+      content: `${current.content}${current.content ? "\n\n" : ""}${snippet}`,
+    }));
+  };
+
+  const updateLayout = <K extends keyof LayoutOptions>(key: K, value: LayoutOptions[K]) => {
+    setForm((current) => ({ ...current, layout: { ...current.layout, [key]: value } }));
   };
 
   const deleteService = async (id: string) => {
@@ -191,570 +403,800 @@ const AdminContent = () => {
       await apiClient.del(`/admin/content/services/${id}`);
       toast.success("Đã xoá dịch vụ");
       await load();
-    } catch {
-      toast.error("Không thể xoá dịch vụ");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể xoá dịch vụ"));
+    }
+  };
+
+  const deletePortfolio = async (id: string) => {
+    try {
+      await apiClient.del(`/admin/content/portfolio/${id}`);
+      toast.success("Đã xoá portfolio");
+      await load();
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể xoá portfolio"));
+    }
+  };
+
+  const deleteBlog = async (id: string) => {
+    try {
+      await apiClient.del(`/admin/content/blog-posts/${id}`);
+      toast.success("Đã xoá bài viết");
+      await load();
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể xoá bài viết"));
     }
   };
 
   const approveReview = async (id: string) => {
-    await apiClient.patch(`/admin/content/reviews/${id}/approve`);
-    toast.success("Đã duyệt đánh giá");
-    await load();
+    try {
+      await apiClient.patch(`/admin/content/reviews/${id}/approve`);
+      toast.success("Đã duyệt đánh giá");
+      await load();
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể duyệt đánh giá"));
+    }
   };
 
   const hideReview = async (id: string) => {
-    await apiClient.patch(`/admin/content/reviews/${id}/hide`);
-    toast.success("Đã ẩn đánh giá");
-    await load();
+    try {
+      await apiClient.patch(`/admin/content/reviews/${id}/hide`);
+      toast.success("Đã ẩn đánh giá");
+      await load();
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể ẩn đánh giá"));
+    }
   };
 
-  // ----- Submit handlers -----
-  const submitPortfolio = async () => {
-    if (!portfolioForm.title.trim()) return toast.error("Vui lòng nhập tiêu đề");
+  const validateForm = () => {
+    if (!form.title.trim()) return "Vui lòng nhập tiêu đề";
+    if (!form.slug.trim() && !slugify(form.title)) return "URL cục bộ chưa hợp lệ";
+
+    if (form.kind === "service") {
+      if (!form.categorySlug) return "Vui lòng chọn chuyên mục dịch vụ";
+      if (!form.summary.trim()) return "Vui lòng nhập mô tả ngắn dịch vụ";
+      if (!form.content.trim()) return "Vui lòng nhập nội dung chi tiết dịch vụ";
+    }
+
+    if (form.kind === "portfolio") {
+      if (!form.category.trim()) return "Vui lòng nhập chuyên mục portfolio";
+      if (!form.coverImageUrl.trim()) return "Vui lòng nhập ảnh minh họa portfolio";
+    }
+
+    if (form.kind === "blog") {
+      if (!form.category.trim()) return "Vui lòng nhập chuyên mục bài viết";
+      if (!form.content.trim()) return "Vui lòng nhập nội dung bài viết";
+    }
+
+    return "";
+  };
+
+  const submitContent = async () => {
+    const error = validateForm();
+    if (error) {
+      toast.error(error);
+      return;
+    }
+
+    const slug = slugify(form.slug || form.title);
     setSubmitting(true);
     try {
-      await apiClient.post("/admin/content/portfolio", {
-        title: portfolioForm.title.trim(),
-        slug: portfolioForm.slug.trim() || slugify(portfolioForm.title),
-        category: portfolioForm.category.trim(),
-        coverImageUrl: portfolioForm.coverImageUrl.trim() || null,
-        guestCount: portfolioForm.guestCount ? Number(portfolioForm.guestCount) : null,
-        status: portfolioForm.status,
-      });
-      toast.success("Đã đăng case study mới");
-      setPortfolioOpen(false);
-      setPortfolioForm(emptyPortfolio);
+      if (form.kind === "service") {
+        await apiClient.post("/admin/content/services", {
+          title: form.title.trim(),
+          slug,
+          categorySlug: form.categorySlug,
+          shortDescription: form.summary.trim(),
+          description: form.content.trim(),
+          priceFrom: numberOrNull(form.priceFrom),
+          priceTo: numberOrNull(form.priceTo),
+          guestFrom: numberOrNull(form.guestFrom),
+          guestTo: numberOrNull(form.guestTo),
+          locationText: form.locationText.trim() || null,
+          coverImageUrl: form.coverImageUrl.trim() || null,
+          isFeatured: form.isFeatured,
+          isActive: form.isPublished,
+        });
+      }
+
+      if (form.kind === "portfolio") {
+        await apiClient.post("/admin/content/portfolio", {
+          title: form.title.trim(),
+          slug,
+          category: form.category.trim(),
+          guestCount: numberOrNull(form.guestCount),
+          coverImageUrl: form.coverImageUrl.trim(),
+          status: form.isPublished ? "visible" : "hidden",
+          publishedAt: form.isPublished ? new Date().toISOString() : null,
+        });
+      }
+
+      if (form.kind === "blog") {
+        await apiClient.post("/admin/content/blog-posts", {
+          title: form.title.trim(),
+          slug,
+          category: form.category.trim(),
+          excerpt: form.summary.trim() || null,
+          content: form.content.trim(),
+          coverImageUrl: form.coverImageUrl.trim() || null,
+          status: form.isPublished ? "published" : "draft",
+          publishedAt: form.isPublished ? new Date().toISOString() : null,
+        });
+      }
+
+      toast.success(`Đã lưu ${labels[form.kind].singular.toLowerCase()}`);
+      setEditorOpen(false);
+      setActiveTab(form.kind);
       await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Đăng bài thất bại");
+    } catch (submitError) {
+      toast.error(getErrorMessage(submitError, "Không thể lưu dữ liệu"));
     } finally {
       setSubmitting(false);
     }
   };
 
-  const submitBlog = async () => {
-    if (!blogForm.title.trim()) return toast.error("Vui lòng nhập tiêu đề");
-    if (!blogForm.content.trim()) return toast.error("Vui lòng nhập nội dung bài viết");
-    setSubmitting(true);
-    try {
-      await apiClient.post("/admin/content/blog-posts", {
-        title: blogForm.title.trim(),
-        slug: blogForm.slug.trim() || slugify(blogForm.title),
-        category: blogForm.category.trim(),
-        excerpt: blogForm.excerpt.trim() || null,
-        content: blogForm.content,
-        coverImageUrl: blogForm.coverImageUrl.trim() || null,
-        status: blogForm.status,
-      });
-      toast.success("Đã đăng bài viết mới");
-      setBlogOpen(false);
-      setBlogForm(emptyBlog);
-      await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Đăng bài thất bại");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const activeCount =
+    activeTab === "service"
+      ? services.length
+      : activeTab === "portfolio"
+        ? portfolioItems.length
+        : activeTab === "blog"
+          ? blogPosts.length
+          : reviews.length;
 
-  const submitService = async () => {
-    if (!serviceForm.title.trim()) return toast.error("Vui lòng nhập tên dịch vụ");
-    setSubmitting(true);
-    try {
-      await apiClient.post("/admin/content/services", {
-        title: serviceForm.title.trim(),
-        slug: serviceForm.slug.trim() || slugify(serviceForm.title),
-        shortDescription: serviceForm.shortDescription.trim(),
-        description: serviceForm.description,
-        priceFrom: serviceForm.priceFrom ? Number(serviceForm.priceFrom) : null,
-        priceTo: serviceForm.priceTo ? Number(serviceForm.priceTo) : null,
-        coverImageUrl: serviceForm.coverImageUrl.trim() || null,
-        categorySlug: serviceForm.categorySlug || null,
-        isActive: serviceForm.isActive,
-      });
-      toast.success("Đã đăng dịch vụ mới");
-      setServiceOpen(false);
-      setServiceForm(emptyService);
-      await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Đăng dịch vụ thất bại");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  if (editorOpen) {
+    const Icon = labels[form.kind].icon;
 
-  const pendingReviews = reviews.filter(r => r.status === "pending").length;
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="font-serif text-headline-lg text-foreground">Quản lý nội dung</h1>
-        <p className="font-body text-sm text-muted-foreground mt-1">
-          {loading ? "Đang tải dữ liệu..." : `Đăng và quản lý Dịch vụ, Portfolio, Bài viết và Đánh giá`}
-        </p>
-      </div>
-
-      <Tabs defaultValue="portfolio" className="space-y-6">
-        <TabsList className="bg-surface-lowest p-1 rounded-xl">
-          <TabsTrigger value="portfolio" className="flex items-center gap-2 rounded-lg font-body text-sm">
-            <LayoutGrid size={14} /> Portfolio
-            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground text-xs">{portfolioItems.length}</span>
-          </TabsTrigger>
-          <TabsTrigger value="blog" className="flex items-center gap-2 rounded-lg font-body text-sm">
-            <BookOpen size={14} /> Bài viết
-            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground text-xs">{blogPosts.length}</span>
-          </TabsTrigger>
-          <TabsTrigger value="reviews" className="flex items-center gap-2 rounded-lg font-body text-sm">
-            <MessageSquare size={14} /> Đánh giá
-            {pendingReviews > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-xs">{pendingReviews}</span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="services" className="flex items-center gap-2 rounded-lg font-body text-sm">
-            <Settings2 size={14} /> Dịch vụ
-            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground text-xs">{services.length}</span>
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Tab Portfolio */}
-        <TabsContent value="portfolio" className="space-y-3">
-          <div className="flex justify-end">
-            <Button onClick={() => setPortfolioOpen(true)} className="gap-2">
-              <Plus size={16} /> Đăng case study mới
+    return (
+      <div className="space-y-5">
+        <div className="flex flex-col gap-3 border-b border-border pb-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3">
+            <Button variant="outline" size="icon" onClick={() => setEditorOpen(false)} title="Danh sách">
+              <ArrowLeft size={16} />
+            </Button>
+            <div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Globe size={14} />
+                <span>Admin</span>
+                <span>/</span>
+                <span>Nội dung</span>
+                <span>/</span>
+                <span>Tạo mới</span>
+              </div>
+              <h1 className="mt-2 flex items-center gap-2 font-serif text-headline-lg text-foreground">
+                <Icon size={22} className="text-primary" />
+                Thông tin {labels[form.kind].singular.toLowerCase()}
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setEditorOpen(false)}>
+              Hủy tác vụ
+            </Button>
+            <Button onClick={submitContent} disabled={submitting} className="gap-2">
+              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              Lưu dữ liệu
             </Button>
           </div>
-          {loading && (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 size={20} className="animate-spin text-muted-foreground" />
-            </div>
-          )}
-          {!loading && portfolioItems.length === 0 && (
-            <EmptyState icon={Image} message="Chưa có case study nào. Hãy đăng case study đầu tiên." />
-          )}
-          {portfolioItems.map((item, i) => {
-            const statusInfo = portfolioStatusMap[item.status] ?? { label: item.status, color: "bg-muted text-muted-foreground border border-border" };
-            return (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="flex items-center justify-between bg-surface-lowest rounded-xl p-4 shadow-ambient hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center flex-shrink-0">
-                    <Image size={16} className="text-primary/60" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-body font-semibold text-foreground truncate">{item.title}</h3>
-                    <div className="flex items-center gap-3 mt-1 flex-wrap">
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Tag size={10} /> {item.category}
-                      </span>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <TrendingUp size={10} /> {item.viewCount ?? 0} lượt xem
-                      </span>
-                      <StatusChip label={statusInfo.label} color={statusInfo.color} />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-1 flex-shrink-0 ml-3">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" title="Xem chi tiết">
-                    <Eye size={14} />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="Xoá" onClick={() => deletePortfolio(item.id)}>
-                    <Trash2 size={14} />
-                  </Button>
-                </div>
-              </motion.div>
-            );
-          })}
-        </TabsContent>
+        </div>
 
-        {/* Tab Blog */}
-        <TabsContent value="blog" className="space-y-3">
-          <div className="flex justify-end">
-            <Button onClick={() => setBlogOpen(true)} className="gap-2">
-              <Plus size={16} /> Đăng bài viết mới
-            </Button>
-          </div>
-          {loading && (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 size={20} className="animate-spin text-muted-foreground" />
+        <div className="rounded-md border border-border bg-surface-lowest shadow-ambient">
+          <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as EditorTab)}>
+            <div className="border-b border-border px-4 pt-4">
+              <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-none bg-transparent p-0">
+                {editorTabs.map((tab) => (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className="gap-2 rounded-none border-b-2 border-transparent px-4 py-3 text-sm data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    <tab.icon size={16} />
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
             </div>
-          )}
-          {!loading && blogPosts.length === 0 && (
-            <EmptyState icon={FileText} message="Chưa có bài viết nào. Hãy viết bài đầu tiên." />
-          )}
-          {blogPosts.map((post, i) => {
-            const statusInfo = blogStatusMap[post.status] ?? { label: post.status, color: "bg-muted text-muted-foreground border border-border" };
-            return (
-              <motion.div
-                key={post.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="flex items-center justify-between bg-surface-lowest rounded-xl p-4 shadow-ambient hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-secondary/5 flex items-center justify-center flex-shrink-0">
-                    <FileText size={16} className="text-secondary/60" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-body font-semibold text-foreground truncate">{post.title}</h3>
-                    <div className="flex items-center gap-3 mt-1 flex-wrap">
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Tag size={10} /> {post.category}
-                      </span>
-                      {post.publishedAt && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Calendar size={10} /> {new Date(post.publishedAt).toLocaleDateString("vi-VN")}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <TrendingUp size={10} /> {post.viewCount ?? 0} lượt xem
-                      </span>
-                      <StatusChip label={statusInfo.label} color={statusInfo.color} />
-                    </div>
-                  </div>
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive flex-shrink-0 ml-3" title="Xoá" onClick={() => deleteBlog(post.id)}>
-                  <Trash2 size={14} />
-                </Button>
-              </motion.div>
-            );
-          })}
-        </TabsContent>
 
-        {/* Tab Đánh giá */}
-        <TabsContent value="reviews" className="space-y-3">
-          {loading && (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 size={20} className="animate-spin text-muted-foreground" />
-            </div>
-          )}
-          {!loading && reviews.length === 0 && (
-            <EmptyState icon={Star} message="Chưa có đánh giá nào từ khách hàng." />
-          )}
-          {reviews.map((review, i) => {
-            const statusInfo = reviewStatusMap[review.status] ?? { label: review.status, color: "bg-muted text-muted-foreground border border-border" };
-            return (
-              <motion.div
-                key={review.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="bg-surface-lowest rounded-xl p-5 shadow-ambient hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center font-bold text-amber-600 text-sm flex-shrink-0">
-                      {(review.customerUser?.displayName ?? "K").charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-body font-semibold text-foreground">
-                          {review.customerUser?.displayName ?? "Khách hàng"}
-                        </h3>
-                        <div className="flex items-center gap-0.5">
-                          {Array.from({ length: 5 }, (_, idx) => (
-                            <Star
-                              key={idx}
-                              size={13}
-                              className={idx < review.ratingOverall ? "text-amber-500 fill-amber-500" : "text-muted-foreground/30"}
-                            />
+            <TabsContent value="basic" className="m-0 p-5">
+              <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+                <div className="space-y-3">
+                  <FieldLabel required>Ảnh minh họa</FieldLabel>
+                  <div className="aspect-[4/3] overflow-hidden rounded-md border border-border bg-surface-low">
+                    {form.coverImageUrl ? (
+                      <img src={form.coverImageUrl} alt="Ảnh minh họa" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                        <Image size={30} />
+                        <span className="text-sm">Chưa có ảnh</span>
+                      </div>
+                    )}
+                  </div>
+                  <Input
+                    value={form.coverImageUrl}
+                    onChange={(event) => setForm((current) => ({ ...current, coverImageUrl: event.target.value }))}
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+
+                <div className="space-y-5">
+                  {form.kind === "service" ? (
+                    <div className="space-y-2">
+                      <FieldLabel required>Chuyên mục</FieldLabel>
+                      <Select
+                        value={form.categorySlug}
+                        onValueChange={(value) => setForm((current) => ({ ...current, categorySlug: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn chuyên mục dịch vụ" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.slug}>
+                              {category.name}
+                            </SelectItem>
                           ))}
-                        </div>
-                        <span className="text-xs text-muted-foreground font-body">({review.ratingOverall}/5)</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        {review.event?.name && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Globe size={10} /> {review.event.name}
-                          </span>
-                        )}
-                        <StatusChip label={statusInfo.label} color={statusInfo.color} />
-                      </div>
-                      <blockquote className="font-body text-sm text-foreground mt-3 leading-relaxed italic border-l-2 border-amber-200 pl-3">
-                        "{review.comment}"
-                      </blockquote>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <FieldLabel required>Chuyên mục</FieldLabel>
+                      <Input
+                        value={form.category}
+                        onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
+                        placeholder={form.kind === "portfolio" ? "Sự kiện nổi bật" : "Cẩm nang"}
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <FieldLabel required>Tiêu đề</FieldLabel>
+                    <Input
+                      value={form.title}
+                      onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+                      placeholder={
+                        form.kind === "service"
+                          ? "Gói tiệc cưới trọn gói 300 khách"
+                          : form.kind === "portfolio"
+                            ? "Gala Dinner Công ty An Khang"
+                            : "Xu hướng tổ chức sự kiện 2026"
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <FieldLabel required>URL cục bộ</FieldLabel>
+                    <div className="flex overflow-hidden rounded-md border border-input bg-background">
+                      <button
+                        type="button"
+                        onClick={() => setForm((current) => ({ ...current, slug: slugify(current.title) }))}
+                        className="border-r border-input px-4 text-sm font-semibold text-foreground hover:bg-surface-low"
+                      >
+                        Đề xuất
+                      </button>
+                      <input
+                        value={form.slug}
+                        onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))}
+                        className="h-10 min-w-0 flex-1 bg-transparent px-3 text-sm outline-none"
+                        placeholder="duong-dan-than-thien"
+                      />
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1 flex-shrink-0">
-                    {review.status !== "approved" && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                        title="Duyệt đánh giá"
-                        onClick={() => approveReview(review.id)}
-                      >
-                        <CheckCircle2 size={15} />
+
+                  <div className="space-y-2">
+                    <FieldLabel>Nhãn chủ đề</FieldLabel>
+                    <div className="flex gap-2">
+                      <Input
+                        value={form.tagDraft}
+                        onChange={(event) => setForm((current) => ({ ...current, tagDraft: event.target.value }))}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            addTag();
+                          }
+                        }}
+                        placeholder="Nhập hashtag"
+                      />
+                      <Button type="button" variant="outline" onClick={addTag} title="Thêm hashtag">
+                        <Hash size={16} />
                       </Button>
-                    )}
-                    {review.status !== "hidden" && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        title="Ẩn đánh giá"
-                        onClick={() => hideReview(review.id)}
-                      >
-                        <EyeOff size={15} />
-                      </Button>
+                    </div>
+                    {form.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {form.tags.map((tag) => (
+                          <Badge key={tag} variant="outline" className="gap-1 rounded-md bg-surface-low px-2 py-1">
+                            #{tag}
+                            <button type="button" onClick={() => removeTag(tag)} title="Xoá hashtag">
+                              <X size={12} />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
                     )}
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </TabsContent>
 
-        {/* Tab Dịch vụ */}
-        <TabsContent value="services" className="space-y-3">
-          <div className="flex justify-end">
-            <Button onClick={() => setServiceOpen(true)} className="gap-2">
-              <Plus size={16} /> Đăng dịch vụ mới
-            </Button>
-          </div>
-          {loading && (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 size={20} className="animate-spin text-muted-foreground" />
-            </div>
-          )}
-          {!loading && services.length === 0 && (
-            <EmptyState icon={Sparkles} message="Chưa có dịch vụ nào. Hãy đăng dịch vụ đầu tiên." />
-          )}
-          {services.map((s, i) => (
-            <motion.div
-              key={s.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className="flex items-center justify-between bg-surface-lowest rounded-xl p-4 shadow-ambient hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
-                  <Sparkles size={16} className="text-accent-foreground/60" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-body font-semibold text-foreground truncate">{s.title}</h3>
-                  <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    {s.category?.name && (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Tag size={10} /> {s.category.name}
-                      </span>
-                    )}
-                    {s.priceFrom != null && (
-                      <span className="text-xs text-muted-foreground">
-                        Từ {Number(s.priceFrom).toLocaleString("vi-VN")}đ
-                      </span>
-                    )}
-                    <StatusChip
-                      label={s.isActive ? "Đang bán" : "Tạm ẩn"}
-                      color={s.isActive
-                        ? "bg-emerald-500/10 text-emerald-600 border border-emerald-200"
-                        : "bg-muted text-muted-foreground border border-border"}
+                  {form.kind === "service" && (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <FieldLabel>Giá từ</FieldLabel>
+                        <Input
+                          type="number"
+                          value={form.priceFrom}
+                          onChange={(event) => setForm((current) => ({ ...current, priceFrom: event.target.value }))}
+                          placeholder="50000000"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <FieldLabel>Giá đến</FieldLabel>
+                        <Input
+                          type="number"
+                          value={form.priceTo}
+                          onChange={(event) => setForm((current) => ({ ...current, priceTo: event.target.value }))}
+                          placeholder="150000000"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <FieldLabel>Khách từ</FieldLabel>
+                        <Input
+                          type="number"
+                          value={form.guestFrom}
+                          onChange={(event) => setForm((current) => ({ ...current, guestFrom: event.target.value }))}
+                          placeholder="100"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <FieldLabel>Khách đến</FieldLabel>
+                        <Input
+                          type="number"
+                          value={form.guestTo}
+                          onChange={(event) => setForm((current) => ({ ...current, guestTo: event.target.value }))}
+                          placeholder="500"
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <FieldLabel>Khu vực phục vụ</FieldLabel>
+                        <Input
+                          value={form.locationText}
+                          onChange={(event) => setForm((current) => ({ ...current, locationText: event.target.value }))}
+                          placeholder="TP.HCM, Hà Nội, Đà Nẵng"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {form.kind === "portfolio" && (
+                    <div className="space-y-2">
+                      <FieldLabel>Số khách</FieldLabel>
+                      <Input
+                        type="number"
+                        value={form.guestCount}
+                        onChange={(event) => setForm((current) => ({ ...current, guestCount: event.target.value }))}
+                        placeholder="300"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <SwitchRow
+                      icon={Eye}
+                      label={form.kind === "service" ? "Hiển thị dịch vụ" : "Xuất bản nội dung"}
+                      checked={form.isPublished}
+                      onCheckedChange={(checked) => setForm((current) => ({ ...current, isPublished: checked }))}
+                    />
+                    <SwitchRow
+                      icon={Star}
+                      label="Đánh dấu nổi bật"
+                      checked={form.isFeatured}
+                      onCheckedChange={(checked) => setForm((current) => ({ ...current, isFeatured: checked }))}
                     />
                   </div>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive flex-shrink-0 ml-3" title="Xoá" onClick={() => deleteService(s.id)}>
-                <Trash2 size={14} />
-              </Button>
-            </motion.div>
-          ))}
+            </TabsContent>
+
+            <TabsContent value="content" className="m-0 space-y-5 p-5">
+              <div className="space-y-2">
+                <FieldLabel required={form.kind === "service"}>Tóm lược</FieldLabel>
+                <Textarea
+                  rows={4}
+                  value={form.summary}
+                  onChange={(event) => setForm((current) => ({ ...current, summary: event.target.value }))}
+                  placeholder={
+                    form.kind === "service"
+                      ? "Mô tả ngắn hiển thị tại danh sách dịch vụ"
+                      : "Nội dung tóm lược hiển thị tại danh sách"
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel required={form.kind !== "portfolio"}>Nội dung chính</FieldLabel>
+                <div className="rounded-md border border-border bg-background">
+                  <div className="flex flex-wrap gap-2 border-b border-border bg-surface-low p-3">
+                    <ToolbarButton label="Tiêu đề H2" onClick={() => insertContent("## Tiêu đề khối")} />
+                    <ToolbarButton label="In đậm" onClick={() => insertContent("**Nội dung in đậm**")} />
+                    <ToolbarButton label="In nghiêng" onClick={() => insertContent("_Nội dung in nghiêng_")} />
+                    <ToolbarButton label="Danh sách" icon={List} onClick={() => insertContent("- Ý chính thứ nhất\n- Ý chính thứ hai")} />
+                    <ToolbarButton label="Chèn link" icon={Link} onClick={() => insertContent("[Tên liên kết](https://example.com)")} />
+                    <ToolbarButton label="Chèn ảnh" icon={Image} onClick={() => insertContent("![Mô tả ảnh](https://example.com/image.jpg)")} />
+                    <ToolbarButton label="Điểm nhấn" icon={Wand2} onClick={() => insertContent("> Nội dung cần nhấn mạnh")} />
+                  </div>
+                  <Textarea
+                    rows={16}
+                    value={form.content}
+                    onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))}
+                    className="min-h-[360px] resize-y rounded-none border-0 focus-visible:ring-0"
+                    placeholder="Soạn nội dung chi tiết..."
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="layout" className="m-0 p-5">
+              <div className="space-y-6">
+                <div>
+                  <h2 className="mb-4 font-body text-sm font-bold text-foreground">Bố cục</h2>
+                  <div className="grid gap-4 lg:grid-cols-3">
+                    <div className="space-y-2">
+                      <FieldLabel>Lớp khung bao bố cục</FieldLabel>
+                      <Select value={form.layout.wrapper} onValueChange={(value) => updateLayout("wrapper", value as LayoutOptions["wrapper"])}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="container">container</SelectItem>
+                          <SelectItem value="container-fluid">container-fluid</SelectItem>
+                          <SelectItem value="wide">wide</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <FieldLabel>Thanh sidebar</FieldLabel>
+                      <Select value={form.layout.sidebar} onValueChange={(value) => updateLayout("sidebar", value as LayoutOptions["sidebar"])}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="right">Đặt sidebar bên phải</SelectItem>
+                          <SelectItem value="left">Đặt sidebar bên trái</SelectItem>
+                          <SelectItem value="none">Không dùng sidebar</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <FieldLabel>Đặt nội dung trong lớp khung bao</FieldLabel>
+                      <Select
+                        value={form.layout.contentWrap}
+                        onValueChange={(value) => updateLayout("contentWrap", value as LayoutOptions["contentWrap"])}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="wrapped">Vâng, bọc nội dung chính</SelectItem>
+                          <SelectItem value="plain">Không bọc nội dung chính</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="mb-4 font-body text-sm font-bold text-foreground">Ẩn / hiện khối thông tin</h2>
+                  <div className="grid gap-x-8 gap-y-3 md:grid-cols-2 xl:grid-cols-3">
+                    <SwitchRow icon={FileText} label="Tiêu đề bài viết" checked={form.layout.showTitle} onCheckedChange={(checked) => updateLayout("showTitle", checked)} />
+                    <SwitchRow icon={Calendar} label="Thời gian và chuyên mục" checked={form.layout.showMeta} onCheckedChange={(checked) => updateLayout("showMeta", checked)} />
+                    <SwitchRow icon={Tags} label="Khối nhãn chủ đề" checked={form.layout.showTags} onCheckedChange={(checked) => updateLayout("showTags", checked)} />
+                    <SwitchRow icon={PanelRight} label="Thanh breadcrumbs" checked={form.layout.showBreadcrumbs} onCheckedChange={(checked) => updateLayout("showBreadcrumbs", checked)} />
+                    <SwitchRow icon={Share2} label="Nút like - share mạng xã hội" checked={form.layout.showShare} onCheckedChange={(checked) => updateLayout("showShare", checked)} />
+                    <SwitchRow icon={Columns3} label="Khối bài viết liên quan" checked={form.layout.showRelated} onCheckedChange={(checked) => updateLayout("showRelated", checked)} />
+                    <SwitchRow icon={Image} label="Ảnh minh họa" checked={form.layout.showCover} onCheckedChange={(checked) => updateLayout("showCover", checked)} />
+                    <SwitchRow icon={FileText} label="Nội dung tóm lược" checked={form.layout.showSummary} onCheckedChange={(checked) => updateLayout("showSummary", checked)} />
+                    <SwitchRow icon={MessageCircle} label="Khối bình luận" checked={form.layout.showComments} onCheckedChange={(checked) => updateLayout("showComments", checked)} />
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="seo" className="m-0 p-5">
+              <div className="grid gap-5 lg:grid-cols-2">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <FieldLabel>Meta description</FieldLabel>
+                    <span className="text-xs text-muted-foreground">{form.metaDescription.length}/160</span>
+                  </div>
+                  <Textarea
+                    rows={8}
+                    value={form.metaDescription}
+                    maxLength={180}
+                    onChange={(event) => setForm((current) => ({ ...current, metaDescription: event.target.value }))}
+                    placeholder="Mô tả ngắn nội dung khi hiển thị trên công cụ tìm kiếm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel>Meta keywords</FieldLabel>
+                  <Textarea
+                    rows={8}
+                    value={form.metaKeywords}
+                    onChange={(event) => setForm((current) => ({ ...current, metaKeywords: event.target.value }))}
+                    placeholder="dịch vụ sự kiện, tiệc cưới, portfolio, blog"
+                  />
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex justify-end gap-2 border-t border-border p-4">
+            <Button variant="outline" onClick={() => setEditorOpen(false)}>
+              Hủy tác vụ
+            </Button>
+            <Button onClick={submitContent} disabled={submitting} className="gap-2">
+              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              Lưu dữ liệu
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Globe size={14} />
+            <span>Admin</span>
+            <span>/</span>
+            <span>Nội dung</span>
+          </div>
+          <h1 className="mt-2 font-serif text-headline-lg text-foreground">Quản lý nội dung</h1>
+          <p className="mt-1 font-body text-sm text-muted-foreground">
+            {loading ? "Đang tải dữ liệu..." : `Quản lý ${activeCount} mục trong khu vực đang chọn`}
+          </p>
+        </div>
+        {activeTab !== "reviews" && (
+          <Button onClick={() => openCreate(activeTab)} className="gap-2">
+            <Plus size={16} />
+            Tạo mới
+          </Button>
+        )}
+      </div>
+
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ContentTab)} className="space-y-4">
+        <div className="flex flex-col gap-3 rounded-md border border-border bg-surface-lowest p-3 md:flex-row md:items-center md:justify-between">
+          <TabsList className="h-auto justify-start gap-1 overflow-x-auto bg-surface-low p-1">
+            <TabsTrigger value="service" className="gap-2">
+              <Sparkles size={15} />
+              Dịch vụ
+              <span className="rounded-full bg-background px-2 py-0.5 text-xs">{services.length}</span>
+            </TabsTrigger>
+            <TabsTrigger value="portfolio" className="gap-2">
+              <LayoutGrid size={15} />
+              Portfolio
+              <span className="rounded-full bg-background px-2 py-0.5 text-xs">{portfolioItems.length}</span>
+            </TabsTrigger>
+            <TabsTrigger value="blog" className="gap-2">
+              <BookOpen size={15} />
+              Blog
+              <span className="rounded-full bg-background px-2 py-0.5 text-xs">{blogPosts.length}</span>
+            </TabsTrigger>
+            <TabsTrigger value="reviews" className="gap-2">
+              <MessageSquare size={15} />
+              Đánh giá
+              <span className="rounded-full bg-background px-2 py-0.5 text-xs">{pendingReviews}</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="relative w-full md:w-72">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="pl-9"
+              placeholder="Nhập từ khóa..."
+            />
+          </div>
+        </div>
+
+        <TabsContent value="service" className="m-0 space-y-3">
+          {loading && <LoaderBlock />}
+          {!loading && filteredServices.length === 0 && <EmptyState icon={Sparkles} message="Chưa có dịch vụ nào." />}
+          {!loading &&
+            filteredServices.map((service, index) => (
+              <motion.div
+                key={service.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03 }}
+                className="grid gap-4 rounded-md border border-border bg-surface-lowest p-4 shadow-ambient lg:grid-cols-[minmax(0,1fr)_auto]"
+              >
+                <div className="flex min-w-0 gap-4">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <Sparkles size={20} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="truncate font-body font-semibold text-foreground">{service.title}</h3>
+                      <StatusChip
+                        label={service.isActive ? "Đang hiển thị" : "Tạm ẩn"}
+                        color={
+                          service.isActive
+                            ? "bg-emerald-500/10 text-emerald-700 border-emerald-200"
+                            : "bg-muted text-muted-foreground border-border"
+                        }
+                      />
+                      {service.isFeatured && <StatusChip label="Nổi bật" color="bg-primary/10 text-primary border-primary/20" />}
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{service.shortDescription || "Chưa có mô tả ngắn"}</p>
+                    <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><Tag size={12} />{service.category?.name ?? "Chưa phân loại"}</span>
+                      <span>{formatMoney(service.priceFrom)}</span>
+                    </div>
+                  </div>
+                </div>
+                <RowActions onDelete={() => void deleteService(service.id)} />
+              </motion.div>
+            ))}
+        </TabsContent>
+
+        <TabsContent value="portfolio" className="m-0 space-y-3">
+          {loading && <LoaderBlock />}
+          {!loading && filteredPortfolio.length === 0 && <EmptyState icon={LayoutGrid} message="Chưa có portfolio nào." />}
+          {!loading &&
+            filteredPortfolio.map((item, index) => {
+              const status = portfolioStatusMap[item.status] ?? {
+                label: item.status,
+                color: "bg-muted text-muted-foreground border-border",
+              };
+              return (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  className="grid gap-4 rounded-md border border-border bg-surface-lowest p-4 shadow-ambient lg:grid-cols-[minmax(0,1fr)_auto]"
+                >
+                  <div className="flex min-w-0 gap-4">
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-secondary/10 text-secondary">
+                      <Image size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate font-body font-semibold text-foreground">{item.title}</h3>
+                        <StatusChip label={status.label} color={status.color} />
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><Tag size={12} />{item.category}</span>
+                        <span className="flex items-center gap-1"><TrendingUp size={12} />{item.viewCount ?? 0} lượt xem</span>
+                        {item.guestCount && <span>{item.guestCount} khách</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <RowActions onDelete={() => void deletePortfolio(item.id)} />
+                </motion.div>
+              );
+            })}
+        </TabsContent>
+
+        <TabsContent value="blog" className="m-0 space-y-3">
+          {loading && <LoaderBlock />}
+          {!loading && filteredBlogs.length === 0 && <EmptyState icon={BookOpen} message="Chưa có bài viết nào." />}
+          {!loading &&
+            filteredBlogs.map((post, index) => {
+              const status = blogStatusMap[post.status] ?? {
+                label: post.status,
+                color: "bg-muted text-muted-foreground border-border",
+              };
+              return (
+                <motion.div
+                  key={post.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  className="grid gap-4 rounded-md border border-border bg-surface-lowest p-4 shadow-ambient lg:grid-cols-[minmax(0,1fr)_auto]"
+                >
+                  <div className="flex min-w-0 gap-4">
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <BookOpen size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate font-body font-semibold text-foreground">{post.title}</h3>
+                        <StatusChip label={status.label} color={status.color} />
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{post.excerpt || "Chưa có tóm lược"}</p>
+                      <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><Tag size={12} />{post.category}</span>
+                        <span className="flex items-center gap-1"><TrendingUp size={12} />{post.viewCount ?? 0} lượt xem</span>
+                        {post.publishedAt && (
+                          <span className="flex items-center gap-1">
+                            <Calendar size={12} />
+                            {new Date(post.publishedAt).toLocaleDateString("vi-VN")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <RowActions onDelete={() => void deleteBlog(post.id)} />
+                </motion.div>
+              );
+            })}
+        </TabsContent>
+
+        <TabsContent value="reviews" className="m-0 space-y-3">
+          {loading && <LoaderBlock />}
+          {!loading && reviews.length === 0 && <EmptyState icon={MessageSquare} message="Chưa có đánh giá nào." />}
+          {!loading &&
+            reviews.map((review, index) => {
+              const status = reviewStatusMap[review.status] ?? {
+                label: review.status,
+                color: "bg-muted text-muted-foreground border-border",
+              };
+              return (
+                <motion.div
+                  key={review.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  className="rounded-md border border-border bg-surface-lowest p-4 shadow-ambient"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-body font-semibold text-foreground">
+                          {review.customerUser?.displayName ?? "Khách hàng"}
+                        </h3>
+                        <div className="flex items-center gap-0.5">
+                          {Array.from({ length: 5 }, (_, starIndex) => (
+                            <Star
+                              key={starIndex}
+                              size={14}
+                              className={starIndex < review.ratingOverall ? "fill-amber-500 text-amber-500" : "text-muted-foreground/30"}
+                            />
+                          ))}
+                        </div>
+                        <StatusChip label={status.label} color={status.color} />
+                      </div>
+                      {review.event?.name && (
+                        <p className="mt-1 text-xs text-muted-foreground">{review.event.name}</p>
+                      )}
+                      <p className="mt-3 text-sm leading-relaxed text-foreground">{review.comment}</p>
+                    </div>
+                    <div className="flex flex-shrink-0 gap-1">
+                      {review.status !== "approved" && (
+                        <Button variant="ghost" size="icon" title="Duyệt đánh giá" onClick={() => void approveReview(review.id)}>
+                          <CheckCircle2 size={16} />
+                        </Button>
+                      )}
+                      {review.status !== "hidden" && (
+                        <Button variant="ghost" size="icon" title="Ẩn đánh giá" onClick={() => void hideReview(review.id)}>
+                          <EyeOff size={16} />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
         </TabsContent>
       </Tabs>
-
-      {/* ===== Dialog: Đăng Portfolio ===== */}
-      <Dialog open={portfolioOpen} onOpenChange={setPortfolioOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="font-serif">Đăng case study mới</DialogTitle>
-            <DialogDescription>Tạo một case study mới hiển thị trên trang Portfolio.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Tiêu đề *</Label>
-              <Input value={portfolioForm.title} onChange={e => setPortfolioForm(f => ({ ...f, title: e.target.value }))} placeholder="VD: Tiệc cưới Minh & Lan" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Slug (URL)</Label>
-                <Input value={portfolioForm.slug} onChange={e => setPortfolioForm(f => ({ ...f, slug: e.target.value }))} placeholder="tu-dong-tao" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Danh mục</Label>
-                <Input value={portfolioForm.category} onChange={e => setPortfolioForm(f => ({ ...f, category: e.target.value }))} placeholder="Tiệc cưới" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Ảnh bìa (URL)</Label>
-                <Input value={portfolioForm.coverImageUrl} onChange={e => setPortfolioForm(f => ({ ...f, coverImageUrl: e.target.value }))} placeholder="https://..." />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Số khách</Label>
-                <Input type="number" value={portfolioForm.guestCount} onChange={e => setPortfolioForm(f => ({ ...f, guestCount: e.target.value }))} placeholder="300" />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Trạng thái</Label>
-              <Select value={portfolioForm.status} onValueChange={(v) => setPortfolioForm(f => ({ ...f, status: v as PortfolioForm["status"] }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Bản nháp</SelectItem>
-                  <SelectItem value="published">Đăng công khai</SelectItem>
-                  <SelectItem value="hidden">Ẩn</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setPortfolioOpen(false)}>Huỷ</Button>
-            <Button onClick={submitPortfolio} disabled={submitting}>
-              {submitting && <Loader2 size={14} className="animate-spin mr-2" />}
-              Đăng case study
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ===== Dialog: Đăng Bài viết ===== */}
-      <Dialog open={blogOpen} onOpenChange={setBlogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="font-serif">Đăng bài viết mới</DialogTitle>
-            <DialogDescription>Viết một bài blog mới hiển thị trên trang Blog.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-            <div className="space-y-1.5">
-              <Label>Tiêu đề *</Label>
-              <Input value={blogForm.title} onChange={e => setBlogForm(f => ({ ...f, title: e.target.value }))} placeholder="VD: 5 xu hướng tiệc cưới 2026" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Slug (URL)</Label>
-                <Input value={blogForm.slug} onChange={e => setBlogForm(f => ({ ...f, slug: e.target.value }))} placeholder="tu-dong-tao" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Danh mục</Label>
-                <Input value={blogForm.category} onChange={e => setBlogForm(f => ({ ...f, category: e.target.value }))} placeholder="Cẩm nang" />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Ảnh bìa (URL)</Label>
-              <Input value={blogForm.coverImageUrl} onChange={e => setBlogForm(f => ({ ...f, coverImageUrl: e.target.value }))} placeholder="https://..." />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Tóm tắt</Label>
-              <Textarea rows={2} value={blogForm.excerpt} onChange={e => setBlogForm(f => ({ ...f, excerpt: e.target.value }))} placeholder="Đoạn mô tả ngắn hiển thị ở danh sách bài viết..." />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Nội dung *</Label>
-              <Textarea rows={8} value={blogForm.content} onChange={e => setBlogForm(f => ({ ...f, content: e.target.value }))} placeholder="Nội dung bài viết (hỗ trợ Markdown)..." />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Trạng thái</Label>
-              <Select value={blogForm.status} onValueChange={(v) => setBlogForm(f => ({ ...f, status: v as BlogForm["status"] }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Bản nháp</SelectItem>
-                  <SelectItem value="published">Đăng công khai</SelectItem>
-                  <SelectItem value="archived">Lưu trữ</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setBlogOpen(false)}>Huỷ</Button>
-            <Button onClick={submitBlog} disabled={submitting}>
-              {submitting && <Loader2 size={14} className="animate-spin mr-2" />}
-              Đăng bài viết
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ===== Dialog: Đăng Dịch vụ ===== */}
-      <Dialog open={serviceOpen} onOpenChange={setServiceOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="font-serif">Đăng dịch vụ mới</DialogTitle>
-            <DialogDescription>Thêm một dịch vụ mới hiển thị trên trang Dịch vụ.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-            <div className="space-y-1.5">
-              <Label>Tên dịch vụ *</Label>
-              <Input value={serviceForm.title} onChange={e => setServiceForm(f => ({ ...f, title: e.target.value }))} placeholder="VD: Gói tiệc cưới trọn gói 300 khách" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Slug (URL)</Label>
-                <Input value={serviceForm.slug} onChange={e => setServiceForm(f => ({ ...f, slug: e.target.value }))} placeholder="tu-dong-tao" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Danh mục</Label>
-                {categories.length > 0 ? (
-                  <Select value={serviceForm.categorySlug} onValueChange={v => setServiceForm(f => ({ ...f, categorySlug: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Chọn danh mục" /></SelectTrigger>
-                    <SelectContent>
-                      {categories.map(c => (
-                        <SelectItem key={c.id} value={c.slug}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input value={serviceForm.categorySlug} onChange={e => setServiceForm(f => ({ ...f, categorySlug: e.target.value }))} placeholder="tiec-cuoi" />
-                )}
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Mô tả ngắn</Label>
-              <Textarea rows={2} value={serviceForm.shortDescription} onChange={e => setServiceForm(f => ({ ...f, shortDescription: e.target.value }))} placeholder="Mô tả ngắn gọn hiển thị ở danh sách dịch vụ..." />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Mô tả chi tiết</Label>
-              <Textarea rows={5} value={serviceForm.description} onChange={e => setServiceForm(f => ({ ...f, description: e.target.value }))} placeholder="Thông tin chi tiết về dịch vụ..." />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Giá từ (VNĐ)</Label>
-                <Input type="number" value={serviceForm.priceFrom} onChange={e => setServiceForm(f => ({ ...f, priceFrom: e.target.value }))} placeholder="50000000" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Giá đến (VNĐ)</Label>
-                <Input type="number" value={serviceForm.priceTo} onChange={e => setServiceForm(f => ({ ...f, priceTo: e.target.value }))} placeholder="150000000" />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Ảnh bìa (URL)</Label>
-              <Input value={serviceForm.coverImageUrl} onChange={e => setServiceForm(f => ({ ...f, coverImageUrl: e.target.value }))} placeholder="https://..." />
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                id="svc-active"
-                type="checkbox"
-                checked={serviceForm.isActive}
-                onChange={e => setServiceForm(f => ({ ...f, isActive: e.target.checked }))}
-                className="h-4 w-4 rounded border-border"
-              />
-              <Label htmlFor="svc-active" className="cursor-pointer">Hiển thị công khai ngay</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setServiceOpen(false)}>Huỷ</Button>
-            <Button onClick={submitService} disabled={submitting}>
-              {submitting && <Loader2 size={14} className="animate-spin mr-2" />}
-              Đăng dịch vụ
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
+
+const LoaderBlock = () => (
+  <div className="flex min-h-[260px] items-center justify-center rounded-md border border-border bg-surface-lowest">
+    <Loader2 size={22} className="animate-spin text-muted-foreground" />
+  </div>
+);
+
+const RowActions = ({ onDelete }: { onDelete: () => void }) => (
+  <div className="flex items-center justify-end gap-1">
+    <Button variant="ghost" size="icon" title="Xoá" className="text-destructive hover:text-destructive" onClick={onDelete}>
+      <Trash2 size={16} />
+    </Button>
+  </div>
+);
 
 export default AdminContent;
