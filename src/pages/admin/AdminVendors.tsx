@@ -46,6 +46,7 @@ type Vendor = {
   category?: VendorCategory;
   phone?: string | null;
   email?: string | null;
+  bankAccountNumber?: string | null;
   contactName?: string | null;
   address: string;
   status: "active" | "paused" | "inactive";
@@ -57,6 +58,7 @@ const emptyVendor = {
   categoryId: "",
   phone: "",
   email: "",
+  bankAccountNumber: "",
   contactName: "",
   address: "",
   status: "active" as Vendor["status"],
@@ -75,6 +77,7 @@ const AdminVendors = () => {
   const [filterCat, setFilterCat] = useState("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [editItem, setEditItem] = useState<Vendor | null>(null);
+  const [viewItem, setViewItem] = useState<Vendor | null>(null);
   const [form, setForm] = useState(emptyVendor);
   const [loading, setLoading] = useState(true);
 
@@ -116,6 +119,7 @@ const AdminVendors = () => {
     categoryId: form.categoryId || categories[0]?.id,
     phone: form.phone.trim() || undefined,
     email: form.email.trim() || "",
+    bankAccountNumber: form.bankAccountNumber.trim() || undefined,
     contactName: form.contactName.trim() || undefined,
     address: form.address.trim(),
     status: form.status,
@@ -153,10 +157,17 @@ const AdminVendors = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (vendor: Vendor) => {
+    const inUse = (vendor._count?.eventVendors ?? 0) > 0;
+    const message = inUse
+      ? `Nhà cung cấp "${vendor.name}" đã tham gia dự án. Hệ thống sẽ chuyển sang trạng thái ngừng hợp tác.`
+      : `Xóa nhà cung cấp "${vendor.name}"?`;
+
+    if (!window.confirm(message)) return;
+
     try {
-      await apiClient.del(`/admin/vendors/${id}`);
-      toast.success("Đã xóa nhà cung cấp");
+      await apiClient.del(`/admin/vendors/${vendor.id}`);
+      toast.success(inUse ? "Đã ngừng hợp tác với nhà cung cấp" : "Đã xóa nhà cung cấp");
       await loadVendors();
     } catch (error) {
       toast.error("Xóa nhà cung cấp thất bại");
@@ -169,6 +180,7 @@ const AdminVendors = () => {
       categoryId: vendor.categoryId,
       phone: vendor.phone ?? "",
       email: vendor.email ?? "",
+      bankAccountNumber: vendor.bankAccountNumber ?? "",
       contactName: vendor.contactName ?? "",
       address: vendor.address,
       status: vendor.status,
@@ -229,6 +241,18 @@ const AdminVendors = () => {
             className="rounded-xl bg-surface-lowest font-body border-none"
           />
         </div>
+      </div>
+      <div>
+        <label className="font-body text-sm text-foreground mb-1 block">
+          Số tài khoản ngân hàng
+        </label>
+        <Input
+          value={form.bankAccountNumber}
+          onChange={(e) =>
+            setForm((p) => ({ ...p, bankAccountNumber: e.target.value }))
+          }
+          className="rounded-xl bg-surface-lowest font-body border-none"
+        />
       </div>
       <div>
         <label className="font-body text-sm text-foreground mb-1 block">
@@ -371,27 +395,27 @@ const AdminVendors = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1 text-xs rounded-xl"
-                onClick={() => openEdit(vendor)}
+                className="flex-1 rounded-full"
+                onClick={() => setViewItem(vendor)}
               >
-                Chỉnh sửa
+                Chi tiết
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal size={14} />
+                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
+                    <MoreHorizontal size={16} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-40">
                   <DropdownMenuItem onClick={() => openEdit(vendor)}>
-                    <Edit2 size={12} className="mr-2" /> Chỉnh sửa
+                    <Edit2 size={14} className="mr-2" /> Chỉnh sửa
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => handleDelete(vendor.id)}
-                    className="text-destructive"
+                    onClick={() => handleDelete(vendor)}
+                    className="text-destructive focus:text-destructive"
                   >
-                    <Trash2 size={12} className="mr-2" /> Xóa
+                    <Trash2 size={14} className="mr-2" /> Xóa
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -399,6 +423,36 @@ const AdminVendors = () => {
           </motion.div>
         ))}
       </div>
+
+      <Dialog open={!!viewItem} onOpenChange={() => setViewItem(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Chi tiết nhà cung cấp</DialogTitle>
+          </DialogHeader>
+          {viewItem && (
+            <div className="space-y-4 font-body text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Tên nhà cung cấp</p>
+                <p className="font-semibold text-foreground">{viewItem.name}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Info label="Danh mục" value={viewItem.category?.name ?? "-"} />
+                <Info label="Trạng thái" value={statusLabel[viewItem.status] ?? viewItem.status} />
+                <Info label="Số điện thoại" value={viewItem.phone || "-"} />
+                <Info label="Email" value={viewItem.email || "-"} />
+                <Info label="Số tài khoản ngân hàng" value={viewItem.bankAccountNumber || "-"} />
+                <Info label="Người liên hệ" value={viewItem.contactName || "-"} />
+                <Info label="Dự án đã tham gia" value={`${viewItem._count?.eventVendors ?? 0} dự án`} />
+              </div>
+              <Info label="Địa chỉ" value={viewItem.address} />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewItem(null)}>Đóng</Button>
+            {viewItem && <Button variant="hero" onClick={() => { const vendor = viewItem; setViewItem(null); openEdit(vendor); }}>Chỉnh sửa</Button>}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-md">
@@ -438,5 +492,12 @@ const AdminVendors = () => {
     </div>
   );
 };
+
+const Info = ({ label, value }: { label: string; value: string }) => (
+  <div className="rounded-lg bg-surface-low p-3">
+    <p className="text-xs text-muted-foreground">{label}</p>
+    <p className="mt-1 break-words font-semibold text-foreground">{value}</p>
+  </div>
+);
 
 export default AdminVendors;

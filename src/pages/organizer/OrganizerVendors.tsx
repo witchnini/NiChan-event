@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Edit2, Phone, MapPin, Tag, Briefcase, Mail, Trash2 } from "lucide-react";
+import { Plus, Edit2, Phone, MapPin, Tag, Briefcase, Mail, Trash2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { apiClient } from "@/services/apiClient";
 import { toast } from "sonner";
 
@@ -16,6 +23,7 @@ type Vendor = {
   category?: VendorCategory;
   phone?: string | null;
   email?: string | null;
+  bankAccountNumber?: string | null;
   contactName?: string | null;
   address: string;
   status: "active" | "paused" | "inactive";
@@ -27,6 +35,7 @@ const emptyForm = {
   categoryId: "",
   phone: "",
   email: "",
+  bankAccountNumber: "",
   contactName: "",
   address: "",
   status: "active",
@@ -44,6 +53,7 @@ const OrganizerVendors = () => {
   const [filter, setFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<Vendor | null>(null);
+  const [viewItem, setViewItem] = useState<Vendor | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
 
@@ -80,6 +90,7 @@ const OrganizerVendors = () => {
     categoryId: form.categoryId || categories[0]?.id,
     phone: form.phone.trim() || undefined,
     email: form.email.trim() || undefined,
+    bankAccountNumber: form.bankAccountNumber.trim() || undefined,
     contactName: form.contactName.trim() || undefined,
     address: form.address.trim(),
     status: form.status,
@@ -98,6 +109,7 @@ const OrganizerVendors = () => {
       categoryId: vendor.categoryId,
       phone: vendor.phone ?? "",
       email: vendor.email ?? "",
+      bankAccountNumber: vendor.bankAccountNumber ?? "",
       contactName: vendor.contactName ?? "",
       address: vendor.address,
       status: vendor.status,
@@ -186,13 +198,56 @@ const OrganizerVendors = () => {
               <div className="flex items-center gap-2"><MapPin size={12} />{vendor.address}</div>
               <div className="flex items-center gap-2"><Briefcase size={12} />Đã tham gia {vendor._count?.eventVendors ?? 0} dự án</div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="ghost" size="sm" className="w-full" onClick={() => openEdit(vendor)}><Edit2 size={14} /> Chỉnh sửa</Button>
-              <Button variant="destructive" size="sm" className="w-full" onClick={() => deleteVendor(vendor)}><Trash2 size={14} /> Xóa</Button>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="sm" className="flex-1 rounded-full" onClick={() => setViewItem(vendor)}>Chi tiết</Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
+                    <MoreHorizontal size={16} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuItem onClick={() => openEdit(vendor)}>
+                    <Edit2 size={14} className="mr-2" /> Chỉnh sửa
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => deleteVendor(vendor)} className="text-destructive focus:text-destructive">
+                    <Trash2 size={14} className="mr-2" /> Xóa
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </motion.div>
         ))}
       </div>
+
+      <Dialog open={!!viewItem} onOpenChange={() => setViewItem(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle className="font-serif">Chi tiết nhà cung cấp</DialogTitle></DialogHeader>
+          {viewItem && (
+            <div className="space-y-4 font-body text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Tên nhà cung cấp</p>
+                <p className="font-semibold text-foreground">{viewItem.name}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Info label="Danh mục" value={viewItem.category?.name ?? "-"} />
+                <Info label="Trạng thái" value={statusLabel[viewItem.status] ?? viewItem.status} />
+                <Info label="Số điện thoại" value={viewItem.phone || "-"} />
+                <Info label="Email" value={viewItem.email || "-"} />
+                <Info label="Số tài khoản ngân hàng" value={viewItem.bankAccountNumber || "-"} />
+                <Info label="Người liên hệ" value={viewItem.contactName || "-"} />
+                <Info label="Dự án đã tham gia" value={`${viewItem._count?.eventVendors ?? 0} dự án`} />
+              </div>
+              <Info label="Địa chỉ" value={viewItem.address} />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewItem(null)}>Đóng</Button>
+            {viewItem && <Button variant="hero" onClick={() => { const vendor = viewItem; setViewItem(null); openEdit(vendor); }}>Chỉnh sửa</Button>}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -209,6 +264,7 @@ const OrganizerVendors = () => {
               <div><label className="font-body text-sm mb-1 block">Liên hệ</label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="rounded-xl border-none bg-surface-low" /></div>
               <div><label className="font-body text-sm mb-1 block">Email</label><Input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="rounded-xl border-none bg-surface-low" /></div>
             </div>
+            <div><label className="font-body text-sm mb-1 block">Số tài khoản ngân hàng</label><Input value={form.bankAccountNumber} onChange={e => setForm({ ...form, bankAccountNumber: e.target.value })} className="rounded-xl border-none bg-surface-low" /></div>
             <div><label className="font-body text-sm mb-1 block">Địa chỉ</label><Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} className="rounded-xl border-none bg-surface-low" /></div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setDialogOpen(false)}>Hủy</Button><Button variant="hero" onClick={save}>Lưu</Button></DialogFooter>
@@ -217,5 +273,12 @@ const OrganizerVendors = () => {
     </div>
   );
 };
+
+const Info = ({ label, value }: { label: string; value: string }) => (
+  <div className="rounded-lg bg-surface-low p-3">
+    <p className="text-xs text-muted-foreground">{label}</p>
+    <p className="mt-1 break-words font-semibold text-foreground">{value}</p>
+  </div>
+);
 
 export default OrganizerVendors;
