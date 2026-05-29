@@ -791,15 +791,15 @@ const AdminStaff = () => {
                   </DropdownMenu>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <div className="rounded-xl bg-surface-low p-3">
-                    <p className="font-body text-[11px] text-muted-foreground">Đang làm</p>
-                    <p className="font-serif text-lg text-foreground">{currentTags.length}</p>
-                  </div>
-                  <div className="rounded-xl bg-surface-low p-3">
-                    <p className="font-body text-[11px] text-muted-foreground">Đã tham gia</p>
-                    <p className="font-serif text-lg text-foreground">{totalProjects} dự án</p>
-                  </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-body font-semibold text-primary">
+                    <Briefcase size={11} className="shrink-0" />
+                    {currentTags.length} đang làm
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-high px-2.5 py-1 text-[11px] font-body font-semibold text-muted-foreground">
+                    <FolderKanban size={11} className="shrink-0" />
+                    {totalProjects} dự án
+                  </span>
                 </div>
 
                 <div className="mt-4 space-y-2">

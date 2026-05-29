@@ -55,7 +55,7 @@ const Portfolio = () => {
           <SectionHeading
             label="Portfolio"
             title="Hành trình sáng tạo"
-            subtitle="Phần portfolio đang đọc trực tiếp từ backend PostgreSQL."
+            subtitle="Mỗi sự kiện là một tác phẩm nghệ thuật, mỗi kỷ niệm là một câu chuyện đáng trân trọng."
           />
         </div>
       </section>

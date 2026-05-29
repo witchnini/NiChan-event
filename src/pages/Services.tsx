@@ -88,7 +88,7 @@ const Services = () => {
           <SectionHeading
             label="Khám phá dịch vụ"
             title="Dịch vụ tổ chức sự kiện"
-            subtitle="Danh sách này đang gọi API thật từ backend thay vì dùng danh sách hardcode trong trang."
+            subtitle="Tìm kiếm gói dịch vụ phù hợp cho sự kiện của bạn từ tiệc cưới đến hội nghị quốc tế."
           />
 
           <div className="max-w-2xl mx-auto relative">

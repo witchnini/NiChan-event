@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -32,6 +32,7 @@ import {
   Tags,
   Trash2,
   TrendingUp,
+  Upload,
   Wand2,
   X,
 } from "lucide-react";
@@ -67,11 +68,19 @@ type ServiceItem = {
   title: string;
   slug: string;
   shortDescription?: string;
+  description?: string;
   priceFrom?: number | string | null;
   priceTo?: number | string | null;
+  guestFrom?: number | null;
+  guestTo?: number | null;
+  locationText?: string | null;
+  coverImageUrl?: string | null;
   isActive?: boolean;
   isFeatured?: boolean;
   category?: ServiceCategory;
+  viewCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type PortfolioItem = {
@@ -84,6 +93,8 @@ type PortfolioItem = {
   guestCount?: number | null;
   coverImageUrl?: string;
   publishedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type BlogPost = {
@@ -92,8 +103,12 @@ type BlogPost = {
   slug?: string;
   category: string;
   excerpt?: string | null;
+  content?: string | null;
+  coverImageUrl?: string | null;
   status: string;
   publishedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
   viewCount?: number;
 };
 
@@ -105,6 +120,14 @@ type Review = {
   customerUser?: { displayName: string };
   event?: { name: string };
 };
+
+type UploadResponse = {
+  url: string;
+};
+
+type ApiUploadResponse =
+  | { success: true; data: UploadResponse }
+  | { success: false; error?: { message?: string } };
 
 type LayoutOptions = {
   wrapper: "container" | "container-fluid" | "wide";
@@ -213,6 +236,13 @@ const formatMoney = (value?: number | string | null) => {
   return `${Number(value).toLocaleString("vi-VN")}đ`;
 };
 
+const formatDateTime = (value?: string | null) => {
+  if (!value) return "Chưa cập nhật";
+  const date = new Date(value);
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
@@ -312,6 +342,12 @@ const AdminContent = () => {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorTab, setEditorTab] = useState<EditorTab>("basic");
   const [form, setForm] = useState<EditorForm>(() => buildEmptyForm("service"));
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
+  const [editingPortfolioId, setEditingPortfolioId] = useState<string | null>(null);
+  const [editingBlogId, setEditingBlogId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [coverImagePreviewUrl, setCoverImagePreviewUrl] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -338,6 +374,12 @@ const AdminContent = () => {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (coverImagePreviewUrl) URL.revokeObjectURL(coverImagePreviewUrl);
+    };
+  }, [coverImagePreviewUrl]);
 
   const filteredServices = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -368,7 +410,73 @@ const AdminContent = () => {
   const pendingReviews = reviews.filter((review) => review.status === "pending").length;
 
   const openCreate = (kind: ContentKind) => {
+    setCoverImagePreviewUrl(null);
+    setEditingServiceId(null);
+    setEditingPortfolioId(null);
+    setEditingBlogId(null);
     setForm(buildEmptyForm(kind, categories));
+    setEditorTab("basic");
+    setEditorOpen(true);
+  };
+
+  const openEditService = (service: ServiceItem) => {
+    setCoverImagePreviewUrl(null);
+    setEditingServiceId(service.id);
+    setEditingPortfolioId(null);
+    setEditingBlogId(null);
+    setForm({
+      ...buildEmptyForm("service", categories),
+      title: service.title,
+      slug: service.slug,
+      categorySlug: service.category?.slug ?? categories[0]?.slug ?? "",
+      coverImageUrl: service.coverImageUrl ?? "",
+      summary: service.shortDescription ?? "",
+      content: service.description ?? "",
+      priceFrom: service.priceFrom != null ? String(service.priceFrom) : "",
+      priceTo: service.priceTo != null ? String(service.priceTo) : "",
+      guestFrom: service.guestFrom != null ? String(service.guestFrom) : "",
+      guestTo: service.guestTo != null ? String(service.guestTo) : "",
+      locationText: service.locationText ?? "",
+      isPublished: service.isActive ?? true,
+      isFeatured: service.isFeatured ?? false,
+    });
+    setEditorTab("basic");
+    setEditorOpen(true);
+  };
+
+  const openEditPortfolio = (item: PortfolioItem) => {
+    setCoverImagePreviewUrl(null);
+    setEditingServiceId(null);
+    setEditingPortfolioId(item.id);
+    setEditingBlogId(null);
+    setForm({
+      ...buildEmptyForm("portfolio", categories),
+      title: item.title,
+      slug: item.slug ?? "",
+      category: item.category,
+      coverImageUrl: item.coverImageUrl ?? "",
+      guestCount: item.guestCount != null ? String(item.guestCount) : "",
+      isPublished: item.status === "visible",
+    });
+    setEditorTab("basic");
+    setEditorOpen(true);
+  };
+
+  const openEditBlog = (post: BlogPost) => {
+    setCoverImagePreviewUrl(null);
+    setEditingServiceId(null);
+    setEditingPortfolioId(null);
+    setEditingBlogId(post.id);
+    setForm({
+      ...buildEmptyForm("blog", categories),
+      title: post.title,
+      slug: post.slug ?? "",
+      category: post.category,
+      coverImageUrl: post.coverImageUrl ?? "",
+      summary: post.excerpt ?? "",
+      content: post.content ?? "",
+      isPublished: post.status === "published",
+    });
     setEditorTab("basic");
     setEditorOpen(true);
   };
@@ -396,6 +504,62 @@ const AdminContent = () => {
 
   const updateLayout = <K extends keyof LayoutOptions>(key: K, value: LayoutOptions[K]) => {
     setForm((current) => ({ ...current, layout: { ...current.layout, [key]: value } }));
+  };
+
+  const uploadCoverImage = async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh");
+      input.value = "";
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Ảnh không được vượt quá 10MB");
+      input.value = "";
+      return;
+    }
+
+    const token = localStorage.getItem("nichan_token");
+    if (!token) {
+      toast.error("Phiên đăng nhập đã hết hạn");
+      input.value = "";
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setCoverImagePreviewUrl(previewUrl);
+
+    const body = new FormData();
+    body.append("file", file);
+    body.append("folder", `content/${form.kind}`);
+
+    setUploadingImage(true);
+    try {
+      const response = await fetch("/api/upload/image", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      });
+      const json = (await response.json()) as ApiUploadResponse;
+
+      if (!json.success) {
+        throw new Error(json.error?.message ?? "Upload ảnh thất bại");
+      }
+
+      setForm((current) => ({ ...current, coverImageUrl: json.data.url }));
+      setCoverImagePreviewUrl(null);
+      toast.success("Đã tải ảnh lên");
+    } catch (error) {
+      setCoverImagePreviewUrl(null);
+      toast.error(getErrorMessage(error, "Không thể tải ảnh lên"));
+    } finally {
+      setUploadingImage(false);
+      input.value = "";
+    }
   };
 
   const deleteService = async (id: string) => {
@@ -465,6 +629,7 @@ const AdminContent = () => {
 
     if (form.kind === "blog") {
       if (!form.category.trim()) return "Vui lòng nhập chuyên mục bài viết";
+      if (!form.coverImageUrl.trim()) return "Vui lòng chọn ảnh minh họa bài viết";
       if (!form.content.trim()) return "Vui lòng nhập nội dung bài viết";
     }
 
@@ -479,10 +644,13 @@ const AdminContent = () => {
     }
 
     const slug = slugify(form.slug || form.title);
+    const wasEditingService = Boolean(editingServiceId);
+    const wasEditingPortfolio = Boolean(editingPortfolioId);
+    const wasEditingBlog = Boolean(editingBlogId);
     setSubmitting(true);
     try {
       if (form.kind === "service") {
-        await apiClient.post("/admin/content/services", {
+        const payload = {
           title: form.title.trim(),
           slug,
           categorySlug: form.categorySlug,
@@ -496,11 +664,17 @@ const AdminContent = () => {
           coverImageUrl: form.coverImageUrl.trim() || null,
           isFeatured: form.isFeatured,
           isActive: form.isPublished,
-        });
+        };
+
+        if (editingServiceId) {
+          await apiClient.put(`/admin/content/services/${editingServiceId}`, payload);
+        } else {
+          await apiClient.post("/admin/content/services", payload);
+        }
       }
 
       if (form.kind === "portfolio") {
-        await apiClient.post("/admin/content/portfolio", {
+        const payload = {
           title: form.title.trim(),
           slug,
           category: form.category.trim(),
@@ -508,11 +682,17 @@ const AdminContent = () => {
           coverImageUrl: form.coverImageUrl.trim(),
           status: form.isPublished ? "visible" : "hidden",
           publishedAt: form.isPublished ? new Date().toISOString() : null,
-        });
+        };
+
+        if (editingPortfolioId) {
+          await apiClient.put(`/admin/content/portfolio/${editingPortfolioId}`, payload);
+        } else {
+          await apiClient.post("/admin/content/portfolio", payload);
+        }
       }
 
       if (form.kind === "blog") {
-        await apiClient.post("/admin/content/blog-posts", {
+        const payload = {
           title: form.title.trim(),
           slug,
           category: form.category.trim(),
@@ -521,11 +701,25 @@ const AdminContent = () => {
           coverImageUrl: form.coverImageUrl.trim() || null,
           status: form.isPublished ? "published" : "draft",
           publishedAt: form.isPublished ? new Date().toISOString() : null,
-        });
+        };
+
+        if (editingBlogId) {
+          await apiClient.put(`/admin/content/blog-posts/${editingBlogId}`, payload);
+        } else {
+          await apiClient.post("/admin/content/blog-posts", payload);
+        }
       }
 
-      toast.success(`Đã lưu ${labels[form.kind].singular.toLowerCase()}`);
+      const updatedLabel =
+        wasEditingService ? "Đã cập nhật dịch vụ"
+          : wasEditingPortfolio ? "Đã cập nhật portfolio"
+            : wasEditingBlog ? "Đã cập nhật bài viết"
+              : `Đã lưu ${labels[form.kind].singular.toLowerCase()}`;
+      toast.success(updatedLabel);
       setEditorOpen(false);
+      setEditingServiceId(null);
+      setEditingPortfolioId(null);
+      setEditingBlogId(null);
       setActiveTab(form.kind);
       await load();
     } catch (submitError) {
@@ -546,6 +740,12 @@ const AdminContent = () => {
 
   if (editorOpen) {
     const Icon = labels[form.kind].icon;
+    const displayCoverImageUrl = coverImagePreviewUrl || form.coverImageUrl;
+    const editorTitle =
+      editingServiceId ? "Chỉnh sửa dịch vụ"
+        : editingPortfolioId ? "Chỉnh sửa portfolio"
+          : editingBlogId ? "Chỉnh sửa bài viết"
+            : `Thông tin ${labels[form.kind].singular.toLowerCase()}`;
 
     return (
       <div className="space-y-5">
@@ -565,7 +765,7 @@ const AdminContent = () => {
               </div>
               <h1 className="mt-2 flex items-center gap-2 font-serif text-headline-lg text-foreground">
                 <Icon size={22} className="text-primary" />
-                Thông tin {labels[form.kind].singular.toLowerCase()}
+                {editorTitle}
               </h1>
             </div>
           </div>
@@ -600,22 +800,59 @@ const AdminContent = () => {
             <TabsContent value="basic" className="m-0 p-5">
               <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
                 <div className="space-y-3">
-                  <FieldLabel required>Ảnh minh họa</FieldLabel>
-                  <div className="aspect-[4/3] overflow-hidden rounded-md border border-border bg-surface-low">
-                    {form.coverImageUrl ? (
-                      <img src={form.coverImageUrl} alt="Ảnh minh họa" className="h-full w-full object-cover" />
+                  <FieldLabel required={form.kind !== "service"}>Ảnh minh họa</FieldLabel>
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-md border border-border bg-surface-low">
+                    {displayCoverImageUrl ? (
+                      <img src={displayCoverImageUrl} alt="Ảnh minh họa" className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
                         <Image size={30} />
                         <span className="text-sm">Chưa có ảnh</span>
                       </div>
                     )}
+                    {uploadingImage && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/80 text-sm font-semibold text-foreground">
+                        <Loader2 size={22} className="animate-spin text-primary" />
+                        Đang tải ảnh lên...
+                      </div>
+                    )}
                   </div>
-                  <Input
-                    value={form.coverImageUrl}
-                    onChange={(event) => setForm((current) => ({ ...current, coverImageUrl: event.target.value }))}
-                    placeholder="https://example.com/image.jpg"
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={uploadCoverImage}
                   />
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      disabled={uploadingImage}
+                      onClick={() => imageInputRef.current?.click()}
+                    >
+                      {uploadingImage ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                      {form.coverImageUrl ? "Chọn ảnh khác" : "Chọn ảnh từ máy"}
+                    </Button>
+                    {form.coverImageUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={uploadingImage}
+                        onClick={() => {
+                          setCoverImagePreviewUrl(null);
+                          setForm((current) => ({ ...current, coverImageUrl: "" }));
+                        }}
+                      >
+                        <X size={16} />
+                        Xóa ảnh
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Hỗ trợ JPG, PNG, WebP, GIF. Dung lượng tối đa 10MB.
+                  </p>
                 </div>
 
                 <div className="space-y-5">
@@ -1009,7 +1246,7 @@ const AdminContent = () => {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03 }}
-                className="grid gap-4 rounded-md border border-border bg-surface-lowest p-4 shadow-ambient lg:grid-cols-[minmax(0,1fr)_auto]"
+                className="grid gap-4 rounded-md border border-border bg-surface-lowest p-4 shadow-ambient lg:grid-cols-[minmax(0,1fr)_110px_210px_auto]"
               >
                 <div className="flex min-w-0 gap-4">
                   <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -1031,11 +1268,23 @@ const AdminContent = () => {
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{service.shortDescription || "Chưa có mô tả ngắn"}</p>
                     <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1"><Tag size={12} />{service.category?.name ?? "Chưa phân loại"}</span>
-                      <span>{formatMoney(service.priceFrom)}</span>
                     </div>
                   </div>
                 </div>
-                <RowActions onDelete={() => void deleteService(service.id)} />
+                <div className="rounded-md bg-surface-low p-3 text-xs text-muted-foreground">
+                  <p className="font-semibold uppercase">Lượt xem</p>
+                  <p className="mt-1 flex items-center gap-1 text-sm font-semibold text-foreground">
+                    <TrendingUp size={13} />
+                    {service.viewCount ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-md bg-surface-low p-3 text-xs text-muted-foreground">
+                  <p className="font-semibold uppercase">Cập nhật lúc</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">
+                    {formatDateTime(service.updatedAt ?? service.createdAt)}
+                  </p>
+                </div>
+                <RowActions onEdit={() => openEditService(service)} onDelete={() => void deleteService(service.id)} />
               </motion.div>
             ))}
         </TabsContent>
@@ -1055,7 +1304,7 @@ const AdminContent = () => {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
-                  className="grid gap-4 rounded-md border border-border bg-surface-lowest p-4 shadow-ambient lg:grid-cols-[minmax(0,1fr)_auto]"
+                  className="grid gap-4 rounded-md border border-border bg-surface-lowest p-4 shadow-ambient lg:grid-cols-[minmax(0,1fr)_110px_210px_auto]"
                 >
                   <div className="flex min-w-0 gap-4">
                     <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-secondary/10 text-secondary">
@@ -1068,12 +1317,24 @@ const AdminContent = () => {
                       </div>
                       <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1"><Tag size={12} />{item.category}</span>
-                        <span className="flex items-center gap-1"><TrendingUp size={12} />{item.viewCount ?? 0} lượt xem</span>
                         {item.guestCount && <span>{item.guestCount} khách</span>}
                       </div>
                     </div>
                   </div>
-                  <RowActions onDelete={() => void deletePortfolio(item.id)} />
+                  <div className="rounded-md bg-surface-low p-3 text-xs text-muted-foreground">
+                    <p className="font-semibold uppercase">Lượt xem</p>
+                    <p className="mt-1 flex items-center gap-1 text-sm font-semibold text-foreground">
+                      <TrendingUp size={13} />
+                      {item.viewCount ?? 0}
+                    </p>
+                  </div>
+                  <div className="rounded-md bg-surface-low p-3 text-xs text-muted-foreground">
+                    <p className="font-semibold uppercase">Cập nhật lúc</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
+                      {formatDateTime(item.updatedAt ?? item.createdAt ?? item.publishedAt)}
+                    </p>
+                  </div>
+                  <RowActions onEdit={() => openEditPortfolio(item)} onDelete={() => void deletePortfolio(item.id)} />
                 </motion.div>
               );
             })}
@@ -1094,7 +1355,7 @@ const AdminContent = () => {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
-                  className="grid gap-4 rounded-md border border-border bg-surface-lowest p-4 shadow-ambient lg:grid-cols-[minmax(0,1fr)_auto]"
+                  className="grid gap-4 rounded-md border border-border bg-surface-lowest p-4 shadow-ambient lg:grid-cols-[minmax(0,1fr)_110px_210px_auto]"
                 >
                   <div className="flex min-w-0 gap-4">
                     <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -1108,7 +1369,6 @@ const AdminContent = () => {
                       <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{post.excerpt || "Chưa có tóm lược"}</p>
                       <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1"><Tag size={12} />{post.category}</span>
-                        <span className="flex items-center gap-1"><TrendingUp size={12} />{post.viewCount ?? 0} lượt xem</span>
                         {post.publishedAt && (
                           <span className="flex items-center gap-1">
                             <Calendar size={12} />
@@ -1118,7 +1378,20 @@ const AdminContent = () => {
                       </div>
                     </div>
                   </div>
-                  <RowActions onDelete={() => void deleteBlog(post.id)} />
+                  <div className="rounded-md bg-surface-low p-3 text-xs text-muted-foreground">
+                    <p className="font-semibold uppercase">Lượt xem</p>
+                    <p className="mt-1 flex items-center gap-1 text-sm font-semibold text-foreground">
+                      <TrendingUp size={13} />
+                      {post.viewCount ?? 0}
+                    </p>
+                  </div>
+                  <div className="rounded-md bg-surface-low p-3 text-xs text-muted-foreground">
+                    <p className="font-semibold uppercase">Cập nhật lúc</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
+                      {formatDateTime(post.updatedAt ?? post.createdAt ?? post.publishedAt)}
+                    </p>
+                  </div>
+                  <RowActions onEdit={() => openEditBlog(post)} onDelete={() => void deleteBlog(post.id)} />
                 </motion.div>
               );
             })}
@@ -1191,8 +1464,13 @@ const LoaderBlock = () => (
   </div>
 );
 
-const RowActions = ({ onDelete }: { onDelete: () => void }) => (
+const RowActions = ({ onDelete, onEdit }: { onDelete: () => void; onEdit?: () => void }) => (
   <div className="flex items-center justify-end gap-1">
+    {onEdit && (
+      <Button variant="ghost" size="icon" title="Chỉnh sửa" onClick={onEdit}>
+        <Edit3 size={16} />
+      </Button>
+    )}
     <Button variant="ghost" size="icon" title="Xoá" className="text-destructive hover:text-destructive" onClick={onDelete}>
       <Trash2 size={16} />
     </Button>

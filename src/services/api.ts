@@ -89,6 +89,9 @@ export const getTestimonials = async () =>
 export const getPortfolioItems = async (params?: { category?: string; visibleOnly?: boolean }) =>
   apiClient.get<PublicPortfolioItem[]>("/public/portfolio", params);
 
+export const getPortfolioBySlug = async (slug: string) =>
+  apiClient.get<PublicPortfolioItem>(`/public/portfolio/${slug}`);
+
 export const getServiceCategories = async () =>
   apiClient.get<PublicServiceCategory[]>("/public/service-categories");
 

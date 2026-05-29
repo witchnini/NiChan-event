@@ -48,7 +48,7 @@ const Blog = () => {
           <SectionHeading
             label="Blog & Tin tức"
             title="Câu chuyện & cảm hứng"
-            subtitle="Danh sách bài viết này đang đọc từ backend thật."
+            subtitle="Từ những ý tưởng sáng tạo đến những khoảnh khắc đáng nhớ, hãy cùng khám phá thế giới tổ chức sự kiện qua ống kính của chúng tôi."
           />
         </div>
       </section>

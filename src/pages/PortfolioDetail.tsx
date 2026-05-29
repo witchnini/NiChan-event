@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Users, Calendar, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import heroImg from "@/assets/hero-wedding.jpg";
-import { getPortfolioItems, type PublicPortfolioItem } from "@/services/api";
+import { getPortfolioItems, getPortfolioBySlug, type PublicPortfolioItem } from "@/services/api";
 
 const formatMonthYear = (value?: string | null) => {
   if (!value) return "Chưa cập nhật";
@@ -25,12 +25,15 @@ const PortfolioDetail = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await getPortfolioItems();
+
+        const [current, allItems] = await Promise.all([
+          getPortfolioBySlug(slug!).catch(() => null),
+          getPortfolioItems(),
+        ]);
         if (cancelled) return;
 
-        const current = data.find((item) => item.slug === slug) ?? null;
         setProject(current);
-        setOtherProjects(data.filter((item) => item.slug !== slug).slice(0, 3));
+        setOtherProjects(allItems.filter((item) => item.slug !== slug).slice(0, 3));
         if (!current) setError("Không tìm thấy dự án phù hợp từ backend.");
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Không thể tải chi tiết portfolio");
