@@ -31,6 +31,7 @@ export type PublicPortfolioItem = {
   title: string;
   slug: string;
   category: string;
+  content?: string | null;
   guestCount?: number | null;
   coverImageUrl: string;
   status: string;

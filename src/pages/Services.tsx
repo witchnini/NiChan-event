@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, Users, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,12 +31,19 @@ const formatGuestRange = (guestFrom?: number | null, guestTo?: number | null) =>
 };
 
 const Services = () => {
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryFromUrl = searchParams.get("category") || "all";
+  const [activeCategory, setActiveCategory] = useState(categoryFromUrl);
   const [searchTerm, setSearchTerm] = useState("");
   const [categories, setCategories] = useState<PublicServiceCategory[]>([]);
   const [services, setServices] = useState<PublicService[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync URL ?category= param to activeCategory state
+  useEffect(() => {
+    setActiveCategory(categoryFromUrl);
+  }, [categoryFromUrl]);
 
   useEffect(() => {
     let cancelled = false;

@@ -80,6 +80,85 @@
   }
 }
 
+@layer components {
+  .rich-text-content {
+    @apply font-body text-foreground;
+  }
+
+  .rich-text-content:empty::before {
+    content: attr(data-placeholder);
+    @apply pointer-events-none text-muted-foreground;
+  }
+
+  .rich-text-content :where(p) {
+    @apply mb-4;
+  }
+
+  .rich-text-content :where(h1) {
+    @apply mb-5 mt-8 font-serif text-display-sm leading-tight text-foreground;
+  }
+
+  .rich-text-content :where(h2) {
+    @apply mb-4 mt-7 font-serif text-headline-lg leading-tight text-foreground;
+  }
+
+  .rich-text-content :where(h3) {
+    @apply mb-3 mt-6 font-serif text-headline-md leading-snug text-foreground;
+  }
+
+  .rich-text-content :where(h4, h5, h6) {
+    @apply mb-3 mt-5 font-body text-lg font-bold text-foreground;
+  }
+
+  .rich-text-content :where(a) {
+    @apply font-semibold text-primary underline underline-offset-4;
+  }
+
+  .rich-text-content :where(blockquote) {
+    @apply my-5 border-l-4 border-primary/40 pl-4 italic text-muted-foreground;
+  }
+
+  .rich-text-content :where(ul) {
+    @apply my-4 list-disc pl-6;
+  }
+
+  .rich-text-content :where(ol) {
+    @apply my-4 list-decimal pl-6;
+  }
+
+  .rich-text-content :where(li) {
+    @apply mb-2 pl-1;
+  }
+
+  .rich-text-content :where(img) {
+    @apply my-6 max-w-full rounded-md border border-border;
+  }
+
+  .rich-text-content :where(hr) {
+    @apply my-6 border-border;
+  }
+
+  .rich-text-content :where(table) {
+    @apply my-6 w-full border-collapse overflow-hidden rounded-md text-sm;
+  }
+
+  .rich-text-content :where(th, td) {
+    @apply border border-border px-3 py-2 align-top;
+  }
+
+  .rich-text-content :where(th) {
+    @apply bg-surface-low font-bold;
+  }
+
+  .rich-text-content :where(pre) {
+    @apply my-5 overflow-x-auto rounded-md bg-surface-low p-4 font-mono text-sm;
+  }
+
+  .rich-text-content :where(code) {
+    @apply rounded bg-surface-low px-1 py-0.5 font-mono text-sm;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

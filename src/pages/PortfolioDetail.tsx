@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Users, Calendar, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import heroImg from "@/assets/hero-wedding.jpg";
+import { normalizeRichTextInput } from "@/lib/richText";
 import { getPortfolioItems, getPortfolioBySlug, type PublicPortfolioItem } from "@/services/api";
 
 const formatMonthYear = (value?: string | null) => {
@@ -47,6 +48,8 @@ const PortfolioDetail = () => {
       cancelled = true;
     };
   }, [slug]);
+
+  const contentHtml = useMemo(() => (project?.content ? normalizeRichTextInput(project.content) : ""), [project?.content]);
 
   if (loading) {
     return <div className="min-h-screen pt-24 flex items-center justify-center font-body text-muted-foreground">Đang tải chi tiết portfolio...</div>;
@@ -92,10 +95,13 @@ const PortfolioDetail = () => {
             <div className="lg:col-span-2 space-y-10">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 <h2 className="font-serif text-headline-lg text-foreground mb-4">Về dự án</h2>
-                <p className="font-body text-muted-foreground leading-relaxed">
-                  Đây là dữ liệu portfolio thật được nạp từ backend. Hiện API công khai mới trả về thông tin danh sách,
-                  nên trang chi tiết đang hiển thị phiên bản rút gọn dựa trên dữ liệu đã có trong PostgreSQL.
-                </p>
+                {contentHtml ? (
+                  <div className="rich-text-content text-lg leading-[1.8]" dangerouslySetInnerHTML={{ __html: contentHtml }} />
+                ) : (
+                  <p className="font-body text-muted-foreground leading-relaxed">
+                    Nội dung chi tiết của portfolio này đang chờ cập nhật.
+                  </p>
+                )}
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
@@ -126,10 +132,10 @@ const PortfolioDetail = () => {
                 <h3 className="font-serif text-headline-md text-foreground mb-4">Ghi chú</h3>
                 <ul className="space-y-3">
                   <li className="flex items-center gap-3 font-body text-sm text-foreground">
-                    <CheckCircle2 size={16} className="text-primary shrink-0" /> Dữ liệu được lấy từ endpoint công khai `/api/public/portfolio`
+                    <CheckCircle2 size={16} className="text-primary shrink-0" /> Dữ liệu được lấy từ endpoint công khai /api/public/portfolio
                   </li>
                   <li className="flex items-center gap-3 font-body text-sm text-foreground">
-                    <CheckCircle2 size={16} className="text-primary shrink-0" /> Trang này không còn phụ thuộc vào danh sách mock cứng
+                    <CheckCircle2 size={16} className="text-primary shrink-0" /> Nội dung chính được quản lý từ trang admin
                   </li>
                 </ul>
               </motion.div>

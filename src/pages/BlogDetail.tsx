@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Calendar, Clock, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import heroImg from "@/assets/hero-wedding.jpg";
+import { normalizeRichTextInput } from "@/lib/richText";
 import { getBlogPostById, type PublicBlogPost } from "@/services/api";
 
 const formatDate = (value?: string | null) => {
@@ -40,13 +41,7 @@ const BlogDetail = () => {
     };
   }, [id]);
 
-  const paragraphs = useMemo(() => {
-    if (!post?.content) return ["Bài viết này hiện chưa có nội dung chi tiết trong hệ thống."];
-    return post.content
-      .split(/\n{2,}/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }, [post]);
+  const contentHtml = useMemo(() => (post?.content ? normalizeRichTextInput(post.content) : ""), [post?.content]);
 
   if (loading) {
     return <div className="min-h-screen pt-24 flex items-center justify-center font-body text-muted-foreground">Đang tải bài viết...</div>;
@@ -89,17 +84,22 @@ const BlogDetail = () => {
       <section className="py-16">
         <div className="container mx-auto px-6">
           <div className="max-w-3xl mx-auto">
-            {paragraphs.map((paragraph, i) => (
-              <motion.p
-                key={`${post.id}-${i}`}
+            {contentHtml ? (
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
+                className="rich-text-content text-lg leading-[1.8]"
+                dangerouslySetInnerHTML={{ __html: contentHtml }}
+              />
+            ) : (
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
                 className="font-body text-foreground leading-[1.8] text-lg mb-6"
               >
-                {paragraph}
+                Bài viết này hiện chưa có nội dung chi tiết trong hệ thống.
               </motion.p>
-            ))}
+            )}
 
             <div className="mt-12 pt-8 flex items-center justify-between" style={{ borderTop: "1px solid hsl(var(--outline-variant) / 0.2)" }}>
               <Link to="/blog">

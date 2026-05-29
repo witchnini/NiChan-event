@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, MapPin, Users, Clock, CheckCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import heroImg from "@/assets/hero-wedding.jpg";
+import { normalizeRichTextInput, richTextToPlainText } from "@/lib/richText";
 import { getServiceBySlug, type PublicService } from "@/services/api";
 
 const formatCurrencyRange = (priceFrom?: string | number | null, priceTo?: string | number | null) => {
@@ -80,6 +81,8 @@ const ServiceDetail = () => {
 
   const includes = buildIncludes(service);
   const process = buildProcess();
+  const descriptionHtml = normalizeRichTextInput(service.description);
+  const descriptionText = richTextToPlainText(service.description);
 
   return (
     <div className="min-h-screen pt-24">
@@ -91,7 +94,7 @@ const ServiceDetail = () => {
               <ArrowLeft size={16} /> Quay lại dịch vụ
             </Link>
             <h1 className="font-serif text-display-md md:text-display-lg text-primary-foreground">{service.title}</h1>
-            <p className="font-body text-primary-foreground/80 text-lg mt-2 max-w-2xl">{service.description}</p>
+            <p className="font-body text-primary-foreground/80 text-lg mt-2 max-w-2xl">{descriptionText}</p>
           </div>
         </div>
       </section>
@@ -100,6 +103,10 @@ const ServiceDetail = () => {
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
             <div className="lg:col-span-2">
+              {descriptionHtml && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rich-text-content mb-16 text-lg leading-[1.8]" dangerouslySetInnerHTML={{ __html: descriptionHtml }} />
+              )}
+
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 <h2 className="font-serif text-headline-lg text-foreground mb-8">Dịch vụ bao gồm</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

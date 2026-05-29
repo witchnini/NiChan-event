@@ -15,8 +15,6 @@ import {
   Hash,
   Image,
   LayoutGrid,
-  Link,
-  List,
   Loader2,
   MessageCircle,
   MessageSquare,
@@ -33,10 +31,10 @@ import {
   Trash2,
   TrendingUp,
   Upload,
-  Wand2,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +48,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { hasMeaningfulRichText, normalizeRichTextInput } from "@/lib/richText";
 import { apiClient } from "@/services/apiClient";
 import { toast } from "sonner";
 
@@ -88,6 +87,7 @@ type PortfolioItem = {
   title: string;
   slug?: string;
   category: string;
+  content?: string | null;
   status: string;
   viewCount?: number;
   guestCount?: number | null;
@@ -191,7 +191,7 @@ const labels: Record<ContentKind, { singular: string; plural: string; create: st
 
 const editorTabs: { value: EditorTab; label: string; icon: LucideIcon }[] = [
   { value: "basic", label: "Thông tin cơ bản", icon: FileText },
-  { value: "content", label: "Nội dung bài viết", icon: Edit3 },
+  { value: "content", label: "Nội dung chính", icon: Edit3 },
   { value: "layout", label: "Bố cục và khối", icon: LayoutGrid },
   { value: "seo", label: "Thông tin SEO", icon: Globe },
 ];
@@ -308,25 +308,6 @@ const SwitchRow = ({
     <Icon size={15} className="text-muted-foreground" />
     <span>{label}</span>
   </label>
-);
-
-const ToolbarButton = ({
-  label,
-  icon: Icon,
-  onClick,
-}: {
-  label: string;
-  icon?: LucideIcon;
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    title={label}
-    onClick={onClick}
-    className="flex h-9 min-w-9 items-center justify-center rounded-md border border-border bg-background px-2 text-xs font-semibold text-foreground transition-colors hover:bg-surface-low"
-  >
-    {Icon ? <Icon size={15} /> : label}
-  </button>
 );
 
 const AdminContent = () => {
@@ -454,6 +435,7 @@ const AdminContent = () => {
       title: item.title,
       slug: item.slug ?? "",
       category: item.category,
+      content: item.content ?? "",
       coverImageUrl: item.coverImageUrl ?? "",
       guestCount: item.guestCount != null ? String(item.guestCount) : "",
       isPublished: item.status === "visible",
@@ -493,13 +475,6 @@ const AdminContent = () => {
 
   const removeTag = (tag: string) => {
     setForm((current) => ({ ...current, tags: current.tags.filter((item) => item !== tag) }));
-  };
-
-  const insertContent = (snippet: string) => {
-    setForm((current) => ({
-      ...current,
-      content: `${current.content}${current.content ? "\n\n" : ""}${snippet}`,
-    }));
   };
 
   const updateLayout = <K extends keyof LayoutOptions>(key: K, value: LayoutOptions[K]) => {
@@ -619,7 +594,7 @@ const AdminContent = () => {
     if (form.kind === "service") {
       if (!form.categorySlug) return "Vui lòng chọn chuyên mục dịch vụ";
       if (!form.summary.trim()) return "Vui lòng nhập mô tả ngắn dịch vụ";
-      if (!form.content.trim()) return "Vui lòng nhập nội dung chi tiết dịch vụ";
+      if (!hasMeaningfulRichText(form.content)) return "Vui lòng nhập nội dung chi tiết dịch vụ";
     }
 
     if (form.kind === "portfolio") {
@@ -630,7 +605,7 @@ const AdminContent = () => {
     if (form.kind === "blog") {
       if (!form.category.trim()) return "Vui lòng nhập chuyên mục bài viết";
       if (!form.coverImageUrl.trim()) return "Vui lòng chọn ảnh minh họa bài viết";
-      if (!form.content.trim()) return "Vui lòng nhập nội dung bài viết";
+      if (!hasMeaningfulRichText(form.content)) return "Vui lòng nhập nội dung bài viết";
     }
 
     return "";
@@ -655,7 +630,7 @@ const AdminContent = () => {
           slug,
           categorySlug: form.categorySlug,
           shortDescription: form.summary.trim(),
-          description: form.content.trim(),
+          description: normalizeRichTextInput(form.content),
           priceFrom: numberOrNull(form.priceFrom),
           priceTo: numberOrNull(form.priceTo),
           guestFrom: numberOrNull(form.guestFrom),
@@ -678,6 +653,7 @@ const AdminContent = () => {
           title: form.title.trim(),
           slug,
           category: form.category.trim(),
+          content: normalizeRichTextInput(form.content) || null,
           guestCount: numberOrNull(form.guestCount),
           coverImageUrl: form.coverImageUrl.trim(),
           status: form.isPublished ? "visible" : "hidden",
@@ -697,7 +673,7 @@ const AdminContent = () => {
           slug,
           category: form.category.trim(),
           excerpt: form.summary.trim() || null,
-          content: form.content.trim(),
+          content: normalizeRichTextInput(form.content),
           coverImageUrl: form.coverImageUrl.trim() || null,
           status: form.isPublished ? "published" : "draft",
           publishedAt: form.isPublished ? new Date().toISOString() : null,
@@ -1048,24 +1024,18 @@ const AdminContent = () => {
 
               <div className="space-y-2">
                 <FieldLabel required={form.kind !== "portfolio"}>Nội dung chính</FieldLabel>
-                <div className="rounded-md border border-border bg-background">
-                  <div className="flex flex-wrap gap-2 border-b border-border bg-surface-low p-3">
-                    <ToolbarButton label="Tiêu đề H2" onClick={() => insertContent("## Tiêu đề khối")} />
-                    <ToolbarButton label="In đậm" onClick={() => insertContent("**Nội dung in đậm**")} />
-                    <ToolbarButton label="In nghiêng" onClick={() => insertContent("_Nội dung in nghiêng_")} />
-                    <ToolbarButton label="Danh sách" icon={List} onClick={() => insertContent("- Ý chính thứ nhất\n- Ý chính thứ hai")} />
-                    <ToolbarButton label="Chèn link" icon={Link} onClick={() => insertContent("[Tên liên kết](https://example.com)")} />
-                    <ToolbarButton label="Chèn ảnh" icon={Image} onClick={() => insertContent("![Mô tả ảnh](https://example.com/image.jpg)")} />
-                    <ToolbarButton label="Điểm nhấn" icon={Wand2} onClick={() => insertContent("> Nội dung cần nhấn mạnh")} />
-                  </div>
-                  <Textarea
-                    rows={16}
-                    value={form.content}
-                    onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))}
-                    className="min-h-[360px] resize-y rounded-none border-0 focus-visible:ring-0"
-                    placeholder="Soạn nội dung chi tiết..."
-                  />
-                </div>
+                <RichTextEditor
+                  value={form.content}
+                  onChange={(content) => setForm((current) => ({ ...current, content }))}
+                  placeholder={
+                    form.kind === "blog"
+                      ? "Soạn nội dung bài viết..."
+                      : form.kind === "portfolio"
+                        ? "Soạn nội dung portfolio..."
+                        : "Soạn nội dung dịch vụ..."
+                  }
+                  uploadFolder={`content/${form.kind}/body`}
+                />
               </div>
             </TabsContent>
 
