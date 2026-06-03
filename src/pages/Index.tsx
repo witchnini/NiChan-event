@@ -152,7 +152,7 @@ const Index = () => {
           <SectionHeading
             label="Dịch vụ của chúng tôi"
             title="Mỗi sự kiện, một tuyệt tác"
-            subtitle="Dữ liệu phần này đang lấy trực tiếp từ backend thay vì mock cứng trong giao diện."
+            subtitle="Từ lễ cưới thơ mộng đến hội nghị đẳng cấp, chúng tôi mang đến trải nghiệm không thể quên."
           />
 
           {loading && <p className="font-body text-muted-foreground">Đang tải dịch vụ...</p>}
@@ -202,7 +202,7 @@ const Index = () => {
           <SectionHeading
             label="Portfolio"
             title="Câu chuyện qua từng sự kiện"
-            subtitle="Danh sách này đang đọc từ bảng portfolio trong PostgreSQL."
+            subtitle="Những khoảnh khắc đẹp nhất mà chúng tôi đã tạo nên cùng khách hàng."
           />
 
           {loading && <p className="font-body text-muted-foreground">Đang tải portfolio...</p>}
