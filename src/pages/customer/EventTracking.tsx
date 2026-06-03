@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle, Circle, Clock, MessageSquare, FileText, CreditCard, ArrowLeft, Send, Download } from "lucide-react";
+import { CheckCircle, Circle, Clock, MessageSquare, FileText, CreditCard, ArrowLeft, Paperclip, Send, Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import ChatAttachment from "@/components/ChatAttachment";
 import { apiClient } from "@/services/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
+import { useChatSocket } from "@/hooks/useChatSocket";
 import { toast } from "sonner";
 import { getEventDisplayName, getEventStatusLabel, getMilestoneStatusLabel, getTransactionStatusLabel, eventStatusColors } from "@/lib/eventDisplay";
 
@@ -25,7 +27,7 @@ type EventDetail = {
 };
 
 type Milestone = { id: string; title: string; dueDate?: string | null; milestoneDate?: string | null; status: string; description?: string | null };
-type Message = { id: string; senderUserId: string; sender?: { displayName: string } | null; messageText: string; sentAt: string };
+type Message = { id: string; senderUserId: string; sender?: { displayName: string } | null; messageText: string; attachmentUrl?: string | null; attachmentType?: string | null; attachmentName?: string | null; sentAt: string };
 type DocumentItem = { id: string; name?: string; fileName?: string; fileType?: string; createdAt: string; status?: string; event?: { id: string; name: string } };
 type Transaction = { id: string; description: string; amount: string | number; transactionDate: string; paymentMethod?: string | null; status: string; event?: { id: string } };
 
@@ -50,6 +52,9 @@ const EventTracking = () => {
   const [newMessage, setNewMessage] = useState("");
   const [activeTab, setActiveTab] = useState<"timeline" | "chat" | "documents" | "payment">("timeline");
   const [loading, setLoading] = useState(true);
+  const [attaching, setAttaching] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     if (!id) return;
@@ -78,6 +83,24 @@ const EventTracking = () => {
     void load();
   }, [id]);
 
+  // Thêm tin nhắn vào danh sách, tránh trùng theo id (socket có thể gửi lại tin của chính mình)
+  const appendMessage = (message: Message) => {
+    setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
+  };
+
+  // Xóa tin nhắn khỏi danh sách (real-time)
+  const removeMessage = (messageId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+  };
+
+  // Nhận tin nhắn real-time của sự kiện này
+  useChatSocket(id, appendMessage, removeMessage);
+
+  // Cuộn xuống tin mới nhất khi danh sách thay đổi
+  useEffect(() => {
+    if (activeTab === "chat") messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, activeTab]);
+
   const totals = useMemo(() => {
     const paid = transactions.filter(tx => tx.status === "completed").reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
     const total = Number(event?.budgetEstimated || 0);
@@ -87,11 +110,49 @@ const EventTracking = () => {
   const handleSendMessage = async () => {
     if (!id || !newMessage.trim()) return;
     try {
-      await apiClient.post(`/customer/events/${id}/chat-messages`, { message: newMessage });
+      const created = await apiClient.post<Message>(`/customer/events/${id}/chat-messages`, { message: newMessage });
       setNewMessage("");
-      await load();
+      appendMessage(created);
     } catch (error) {
       toast.error("Gửi tin nhắn thất bại");
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!id) return;
+    try {
+      await apiClient.del(`/customer/events/${id}/chat-messages/${messageId}`);
+      removeMessage(messageId);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Xóa tin nhắn thất bại");
+    }
+  };
+
+  const handleSendAttachment = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !id) return;
+
+    setAttaching(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("folder", "chat");
+      const uploaded = await apiClient.upload<{ url: string; type: string; name: string }>(
+        "/upload/file",
+        form,
+      );
+      const created = await apiClient.post<Message>(`/customer/events/${id}/chat-messages`, {
+        message: "",
+        attachmentUrl: uploaded.url,
+        attachmentType: uploaded.type,
+        attachmentName: uploaded.name,
+      });
+      appendMessage(created);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gửi tệp thất bại");
+    } finally {
+      setAttaching(false);
     }
   };
 
@@ -198,18 +259,31 @@ const EventTracking = () => {
                 {messages.map(msg => {
                   const isMine = msg.senderUserId === user?.userId;
                   return (
-                    <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+                    <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`group flex items-center gap-2 ${isMine ? "justify-end" : "justify-start"}`}>
+                      {isMine && (
+                        <button
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                          title="Xóa tin nhắn"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                       <div className={`max-w-[80%] rounded-xl p-4 ${isMine ? "gradient-primary text-primary-foreground" : "bg-surface-low"}`}>
                         {!isMine && <p className="font-body text-xs text-primary font-semibold mb-1">{msg.sender?.displayName ?? "Quản lý"}</p>}
-                        <p className="font-body text-sm">{msg.messageText}</p>
+                        {msg.messageText && <p className="font-body text-sm">{msg.messageText}</p>}
+                        <ChatAttachment url={msg.attachmentUrl} type={msg.attachmentType} name={msg.attachmentName} isMine={isMine} />
                         <p className={`font-body text-xs mt-2 ${isMine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{new Date(msg.sentAt).toLocaleString("vi-VN")}</p>
                       </div>
                     </motion.div>
                   );
                 })}
+                <div ref={messagesEndRef} />
               </div>
               <div className="p-4 bg-surface-low flex gap-3">
-                <Input value={newMessage} onChange={e => setNewMessage(e.target.value)} onKeyDown={e => { if (e.key === "Enter") void handleSendMessage(); }} placeholder="Nhập tin nhắn..." className="flex-1 rounded-xl bg-surface-lowest font-body border-none" />
+                <input ref={chatFileInputRef} type="file" className="hidden" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" onChange={handleSendAttachment} />
+                <Input value={newMessage} onChange={e => setNewMessage(e.target.value)} onKeyDown={e => { if (e.key === "Enter") void handleSendMessage(); }} placeholder={attaching ? "Đang gửi tệp..." : "Nhập tin nhắn..."} className="flex-1 rounded-xl bg-surface-lowest font-body border-none" />
+                <Button variant="ghost" size="icon" onClick={() => chatFileInputRef.current?.click()} disabled={attaching} title="Gửi hình ảnh / tệp"><Paperclip size={18} /></Button>
                 <Button variant="hero" size="icon" onClick={handleSendMessage} disabled={!newMessage.trim()}><Send size={18} /></Button>
               </div>
             </div>

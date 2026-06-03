@@ -76,6 +76,24 @@ async function request<T>(
   return json.data as T;
 }
 
+async function uploadRequest<T>(path: string, form: FormData): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}${path}`, { method: "POST", headers, body: form });
+  const json = await res
+    .json()
+    .catch(() => ({ success: false, error: { code: "PARSE_ERROR", message: "Invalid JSON response" } }));
+
+  if (!json.success) {
+    const err = json.error as ApiError;
+    throw new ApiException(err.code ?? "UNKNOWN", err.message ?? "Upload failed", res.status, err.details);
+  }
+
+  return json.data as T;
+}
+
 export const apiClient = {
   get: <T>(path: string, params?: Record<string, string | number | boolean | undefined>) =>
     request<T>("GET", path, undefined, params),
@@ -83,4 +101,5 @@ export const apiClient = {
   patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body),
   put: <T>(path: string, body?: unknown) => request<T>("PUT", path, body),
   del: <T>(path: string) => request<T>("DELETE", path),
+  upload: <T>(path: string, form: FormData) => uploadRequest<T>(path, form),
 };

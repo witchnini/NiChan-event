@@ -29,7 +29,7 @@ import ReviewRating from "./pages/customer/ReviewRating.tsx";
 import OrganizerLayout from "./pages/organizer/OrganizerLayout.tsx";
 import OrganizerDashboard from "./pages/organizer/OrganizerDashboard.tsx";
 import OrganizerProjects from "./pages/organizer/OrganizerProjects.tsx";
-import OrganizerStaff from "./pages/organizer/OrganizerStaff.tsx";
+import OrganizerCommunication from "./pages/organizer/OrganizerCommunication.tsx";
 import OrganizerVendors from "./pages/organizer/OrganizerVendors.tsx";
 import OrganizerBudget from "./pages/organizer/OrganizerBudget.tsx";
 import OrganizerReports from "./pages/organizer/OrganizerReports.tsx";
@@ -101,7 +101,7 @@ const App = () => (
             >
               <Route index element={<OrganizerDashboard />} />
               <Route path="du-an" element={<OrganizerProjects />} />
-              <Route path="nhan-su" element={<OrganizerStaff />} />
+              <Route path="trao-doi" element={<OrganizerCommunication />} />
               <Route path="nha-cung-cap" element={<OrganizerVendors />} />
               <Route path="ngan-sach" element={<OrganizerBudget />} />
               <Route path="bao-cao" element={<OrganizerReports />} />
