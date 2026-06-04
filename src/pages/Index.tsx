@@ -47,7 +47,7 @@ const Index = () => {
         ]);
 
         if (cancelled) return;
-        setServices(servicesData.slice(0, 4));
+        setServices(servicesData.slice(0, 6));
         setStats(statsData);
         setTestimonials(testimonialsData.slice(0, 3));
         setPortfolioItems(portfolioData.slice(0, 3));
@@ -159,7 +159,7 @@ const Index = () => {
           {error && <p className="font-body text-destructive">{error}</p>}
 
           {!loading && !error && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {services.map((service, i) => (
                 <motion.div
                   key={service.id}
@@ -192,6 +192,16 @@ const Index = () => {
                   </Link>
                 </motion.div>
               ))}
+            </div>
+          )}
+
+          {!loading && !error && (
+            <div className="text-center mt-12">
+              <Link to={appendRole("/dich-vu")}>
+                <Button variant="tertiary" size="lg">
+                  Xem tất cả dịch vụ <ArrowRight size={16} />
+                </Button>
+              </Link>
             </div>
           )}
         </div>

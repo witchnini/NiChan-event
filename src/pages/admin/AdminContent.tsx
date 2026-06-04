@@ -6,7 +6,6 @@ import {
   BookOpen,
   Calendar,
   CheckCircle2,
-  Columns3,
   Edit3,
   Eye,
   EyeOff,
@@ -16,18 +15,14 @@ import {
   Image,
   LayoutGrid,
   Loader2,
-  MessageCircle,
   MessageSquare,
-  PanelRight,
   Plus,
   Save,
   Search,
   Send,
-  Share2,
   Sparkles,
   Star,
   Tag,
-  Tags,
   Trash2,
   TrendingUp,
   Upload,
@@ -54,7 +49,7 @@ import { toast } from "sonner";
 
 type ContentKind = "service" | "portfolio" | "blog";
 type ContentTab = ContentKind | "reviews";
-type EditorTab = "basic" | "content" | "layout" | "seo";
+type EditorTab = "basic" | "content";
 
 type ServiceCategory = {
   id: string;
@@ -129,21 +124,6 @@ type ApiUploadResponse =
   | { success: true; data: UploadResponse }
   | { success: false; error?: { message?: string } };
 
-type LayoutOptions = {
-  wrapper: "container" | "container-fluid" | "wide";
-  sidebar: "right" | "left" | "none";
-  contentWrap: "wrapped" | "plain";
-  showTitle: boolean;
-  showMeta: boolean;
-  showTags: boolean;
-  showBreadcrumbs: boolean;
-  showShare: boolean;
-  showRelated: boolean;
-  showCover: boolean;
-  showSummary: boolean;
-  showComments: boolean;
-};
-
 type EditorForm = {
   kind: ContentKind;
   title: string;
@@ -163,24 +143,6 @@ type EditorForm = {
   locationText: string;
   isPublished: boolean;
   isFeatured: boolean;
-  layout: LayoutOptions;
-  metaDescription: string;
-  metaKeywords: string;
-};
-
-const defaultLayout: LayoutOptions = {
-  wrapper: "container",
-  sidebar: "right",
-  contentWrap: "wrapped",
-  showTitle: true,
-  showMeta: true,
-  showTags: true,
-  showBreadcrumbs: true,
-  showShare: true,
-  showRelated: true,
-  showCover: true,
-  showSummary: true,
-  showComments: true,
 };
 
 const labels: Record<ContentKind, { singular: string; plural: string; create: string; icon: LucideIcon }> = {
@@ -192,8 +154,6 @@ const labels: Record<ContentKind, { singular: string; plural: string; create: st
 const editorTabs: { value: EditorTab; label: string; icon: LucideIcon }[] = [
   { value: "basic", label: "Thông tin cơ bản", icon: FileText },
   { value: "content", label: "Nội dung chính", icon: Edit3 },
-  { value: "layout", label: "Bố cục và khối", icon: LayoutGrid },
-  { value: "seo", label: "Thông tin SEO", icon: Globe },
 ];
 
 const blogStatusMap: Record<string, { label: string; color: string }> = {
@@ -265,9 +225,6 @@ const buildEmptyForm = (kind: ContentKind, categories: ServiceCategory[] = []): 
   locationText: "",
   isPublished: true,
   isFeatured: false,
-  layout: { ...defaultLayout, sidebar: kind === "service" ? "none" : "right" },
-  metaDescription: "",
-  metaKeywords: "",
 });
 
 const StatusChip = ({ label, color }: { label: string; color: string }) => (
@@ -475,10 +432,6 @@ const AdminContent = () => {
 
   const removeTag = (tag: string) => {
     setForm((current) => ({ ...current, tags: current.tags.filter((item) => item !== tag) }));
-  };
-
-  const updateLayout = <K extends keyof LayoutOptions>(key: K, value: LayoutOptions[K]) => {
-    setForm((current) => ({ ...current, layout: { ...current.layout, [key]: value } }));
   };
 
   const uploadCoverImage = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -1039,98 +992,6 @@ const AdminContent = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="layout" className="m-0 p-5">
-              <div className="space-y-6">
-                <div>
-                  <h2 className="mb-4 font-body text-sm font-bold text-foreground">Bố cục</h2>
-                  <div className="grid gap-4 lg:grid-cols-3">
-                    <div className="space-y-2">
-                      <FieldLabel>Lớp khung bao bố cục</FieldLabel>
-                      <Select value={form.layout.wrapper} onValueChange={(value) => updateLayout("wrapper", value as LayoutOptions["wrapper"])}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="container">container</SelectItem>
-                          <SelectItem value="container-fluid">container-fluid</SelectItem>
-                          <SelectItem value="wide">wide</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <FieldLabel>Thanh sidebar</FieldLabel>
-                      <Select value={form.layout.sidebar} onValueChange={(value) => updateLayout("sidebar", value as LayoutOptions["sidebar"])}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="right">Đặt sidebar bên phải</SelectItem>
-                          <SelectItem value="left">Đặt sidebar bên trái</SelectItem>
-                          <SelectItem value="none">Không dùng sidebar</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <FieldLabel>Đặt nội dung trong lớp khung bao</FieldLabel>
-                      <Select
-                        value={form.layout.contentWrap}
-                        onValueChange={(value) => updateLayout("contentWrap", value as LayoutOptions["contentWrap"])}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="wrapped">Vâng, bọc nội dung chính</SelectItem>
-                          <SelectItem value="plain">Không bọc nội dung chính</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h2 className="mb-4 font-body text-sm font-bold text-foreground">Ẩn / hiện khối thông tin</h2>
-                  <div className="grid gap-x-8 gap-y-3 md:grid-cols-2 xl:grid-cols-3">
-                    <SwitchRow icon={FileText} label="Tiêu đề bài viết" checked={form.layout.showTitle} onCheckedChange={(checked) => updateLayout("showTitle", checked)} />
-                    <SwitchRow icon={Calendar} label="Thời gian và chuyên mục" checked={form.layout.showMeta} onCheckedChange={(checked) => updateLayout("showMeta", checked)} />
-                    <SwitchRow icon={Tags} label="Khối nhãn chủ đề" checked={form.layout.showTags} onCheckedChange={(checked) => updateLayout("showTags", checked)} />
-                    <SwitchRow icon={PanelRight} label="Thanh breadcrumbs" checked={form.layout.showBreadcrumbs} onCheckedChange={(checked) => updateLayout("showBreadcrumbs", checked)} />
-                    <SwitchRow icon={Share2} label="Nút like - share mạng xã hội" checked={form.layout.showShare} onCheckedChange={(checked) => updateLayout("showShare", checked)} />
-                    <SwitchRow icon={Columns3} label="Khối bài viết liên quan" checked={form.layout.showRelated} onCheckedChange={(checked) => updateLayout("showRelated", checked)} />
-                    <SwitchRow icon={Image} label="Ảnh minh họa" checked={form.layout.showCover} onCheckedChange={(checked) => updateLayout("showCover", checked)} />
-                    <SwitchRow icon={FileText} label="Nội dung tóm lược" checked={form.layout.showSummary} onCheckedChange={(checked) => updateLayout("showSummary", checked)} />
-                    <SwitchRow icon={MessageCircle} label="Khối bình luận" checked={form.layout.showComments} onCheckedChange={(checked) => updateLayout("showComments", checked)} />
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="seo" className="m-0 p-5">
-              <div className="grid gap-5 lg:grid-cols-2">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <FieldLabel>Meta description</FieldLabel>
-                    <span className="text-xs text-muted-foreground">{form.metaDescription.length}/160</span>
-                  </div>
-                  <Textarea
-                    rows={8}
-                    value={form.metaDescription}
-                    maxLength={180}
-                    onChange={(event) => setForm((current) => ({ ...current, metaDescription: event.target.value }))}
-                    placeholder="Mô tả ngắn nội dung khi hiển thị trên công cụ tìm kiếm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <FieldLabel>Meta keywords</FieldLabel>
-                  <Textarea
-                    rows={8}
-                    value={form.metaKeywords}
-                    onChange={(event) => setForm((current) => ({ ...current, metaKeywords: event.target.value }))}
-                    placeholder="dịch vụ sự kiện, tiệc cưới, portfolio, blog"
-                  />
-                </div>
-              </div>
-            </TabsContent>
           </Tabs>
 
           <div className="flex justify-end gap-2 border-t border-border p-4">

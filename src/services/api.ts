@@ -71,7 +71,7 @@ export type PublicStat = {
 };
 
 export const getPublicServices = async () =>
-  apiClient.get<PublicService[]>("/public/services", { featured: true });
+  apiClient.get<PublicService[]>("/public/services");
 
 export const getAllServices = async (params?: { category?: string; search?: string; featured?: boolean }) =>
   apiClient.get<PublicService[]>("/public/services", params);
